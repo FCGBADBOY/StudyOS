@@ -1,0 +1,270 @@
+import type { Reaction } from '@/types'
+
+/**
+ * Reaction Lab — animated reaction flows. Each entry carries the full journey
+ * (reactants → reagents → named reaction → product) plus a mechanism outline.
+ */
+export const REACTIONS: Reaction[] = [
+  {
+    id: 'rxn-reimer-tiemann',
+    slug: 'reimer-tiemann',
+    name: 'Reimer–Tiemann Reaction',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Alcohols, Phenols and Ethers',
+    reactants: ['Phenol'],
+    reagents: ['CHCl₃', 'NaOH'],
+    conditions: 'Aqueous NaOH, 60 °C, then dilute acid work-up',
+    products: ['Salicylaldehyde'],
+    equation: 'C₆H₅OH + CHCl₃ + 3 NaOH → 2-HOC₆H₄CHO + 3 NaCl + 2 H₂O',
+    mechanism: [
+      'Chloroform + base generates the electrophile dichlorocarbene (:CCl₂).',
+      'The phenoxide ring attacks :CCl₂ at the ortho position.',
+      'Hydrolysis of the gem-dichloride intermediate gives the aldehyde.',
+      'Tautomerisation restores aromaticity → salicylaldehyde.',
+    ],
+    keyPoints: [
+      '–CHO is installed ortho to the –OH group.',
+      'Salicylaldehyde on oxidation gives salicylic acid.',
+      'Para product forms in small amounts unless the para site is blocked.',
+    ],
+    steps: [
+      { id: 'rt-1', label: 'Phenol', detail: 'Activated ring, ortho/para directing –OH' },
+      { id: 'rt-2', label: 'CHCl₃ + NaOH', detail: 'Generates :CCl₂ electrophile' },
+      { id: 'rt-3', label: 'Reimer–Tiemann Reaction', detail: 'Ortho-formylation' },
+      { id: 'rt-4', label: 'Salicylaldehyde', detail: '2-hydroxybenzaldehyde' },
+    ],
+  },
+  {
+    id: 'rxn-kolbe',
+    slug: 'kolbe-schmitt',
+    name: 'Kolbe’s Reaction',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Alcohols, Phenols and Ethers',
+    reactants: ['Sodium phenoxide'],
+    reagents: ['CO₂', 'H₃O⁺'],
+    conditions: '4–7 atm CO₂, 125 °C, followed by acidification',
+    products: ['Salicylic acid'],
+    equation: 'C₆H₅ONa + CO₂ → 2-NaOC₆H₄COOH → 2-HOC₆H₄COOH',
+    mechanism: [
+      'Carboxylation of the activated phenoxide ring.',
+      'Rearrangement to the ortho-hydroxybenzoate.',
+      'Acid work-up liberates salicylic acid.',
+    ],
+    keyPoints: [
+      'Industrial route to salicylic acid and aspirin.',
+      'Pressure is essential — CO₂ is a weak electrophile.',
+    ],
+    steps: [
+      { id: 'kb-1', label: 'Sodium phenoxide', detail: 'Strongly activated ring' },
+      { id: 'kb-2', label: 'CO₂, 125 °C', detail: 'Electrophilic carboxylation' },
+      { id: 'kb-3', label: 'H₃O⁺', detail: 'Acidification' },
+      { id: 'kb-4', label: 'Salicylic acid', detail: '2-hydroxybenzoic acid' },
+    ],
+  },
+  {
+    id: 'rxn-williamson',
+    slug: 'williamson-synthesis',
+    name: 'Williamson Synthesis',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Alcohols, Phenols and Ethers',
+    reactants: ['Sodium phenoxide', 'CH₃I'],
+    reagents: ['CH₃I'],
+    conditions: 'Dry acetone, reflux (Sₙ2)',
+    products: ['Anisole'],
+    equation: 'C₆H₅ONa + CH₃I → C₆H₅OCH₃ + NaI',
+    mechanism: [
+      'Phenoxide ion performs an Sₙ2 attack on the alkyl halide.',
+      'Methyl iodide is unhindered → clean substitution.',
+    ],
+    keyPoints: [
+      'Always use the less hindered halide for Sₙ2.',
+      'Aryl halides never work here — no Sₙ2 on sp² carbon.',
+    ],
+    steps: [
+      { id: 'ws-1', label: 'Sodium phenoxide', detail: 'Nucleophile' },
+      { id: 'ws-2', label: 'CH₃I', detail: 'Sₙ2 substrate' },
+      { id: 'ws-3', label: 'Williamson Synthesis', detail: 'Ether linkage forms' },
+      { id: 'ws-4', label: 'Anisole', detail: 'Methoxybenzene' },
+    ],
+  },
+  {
+    id: 'rxn-friedel-crafts',
+    slug: 'friedel-crafts-alkylation',
+    name: 'Friedel–Crafts Alkylation',
+    family: 'Electrophilic substitution',
+    subjectId: 'chemistry',
+    chapter: 'Alcohols, Phenols and Ethers',
+    reactants: ['Benzene'],
+    reagents: ['CH₃Cl', 'Anhydrous AlCl₃'],
+    conditions: 'Anhydrous conditions, 25–40 °C',
+    products: ['Toluene'],
+    equation: 'C₆H₆ + CH₃Cl --AlCl₃--> C₆H₅CH₃ + HCl',
+    mechanism: [
+      'AlCl₃ abstracts Cl⁻ to form the methyl carbocation (CH₃⁺).',
+      'The carbocation attacks the aromatic ring (σ-complex).',
+      'Loss of H⁺ restores aromaticity.',
+    ],
+    keyPoints: [
+      'Does not occur on aniline or nitrobenzene.',
+      'Polyalkylation is possible — control the stoichiometry.',
+    ],
+    steps: [
+      { id: 'fc-1', label: 'Benzene', detail: 'Aromatic substrate' },
+      { id: 'fc-2', label: 'CH₃Cl / AlCl₃', detail: 'Generates CH₃⁺' },
+      { id: 'fc-3', label: 'Electrophilic substitution', detail: 'σ-complex → loss of H⁺' },
+      { id: 'fc-4', label: 'Toluene', detail: 'Methylbenzene' },
+    ],
+  },
+  {
+    id: 'rxn-aldol',
+    slug: 'aldol-condensation',
+    name: 'Aldol Condensation',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Aldehydes, Ketones and Carboxylic Acids',
+    reactants: ['Acetaldehyde'],
+    reagents: ['Dilute NaOH'],
+    conditions: 'Dilute base, 0–5 °C then warming',
+    products: ['3-Hydroxybutanal (Aldol)'],
+    equation: '2 CH₃CHO --dil. NaOH--> CH₃CH(OH)CH₂CHO',
+    mechanism: [
+      'Base abstracts an α-hydrogen → enolate ion.',
+      'Enolate attacks the carbonyl carbon of another molecule.',
+      'Protonation gives the β-hydroxy aldehyde (aldol).',
+      'Warming causes dehydration → α,β-unsaturated aldehyde.',
+    ],
+    keyPoints: [
+      'Requires at least one α-hydrogen.',
+      'Formaldehyde cannot undergo aldol condensation.',
+    ],
+    steps: [
+      { id: 'al-1', label: 'Acetaldehyde', detail: 'α-hydrogen present' },
+      { id: 'al-2', label: 'Dilute NaOH', detail: 'Enolate formation' },
+      { id: 'al-3', label: 'Aldol Condensation', detail: 'Nucleophilic addition + dehydration' },
+      { id: 'al-4', label: 'Aldol product', detail: 'β-hydroxy aldehyde' },
+    ],
+  },
+  {
+    id: 'rxn-cannizzaro',
+    slug: 'cannizzaro-reaction',
+    name: 'Cannizzaro Reaction',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Aldehydes, Ketones and Carboxylic Acids',
+    reactants: ['Benzaldehyde'],
+    reagents: ['Conc. NaOH (50%)'],
+    conditions: 'Concentrated alkali, no α-hydrogen',
+    products: ['Benzyl alcohol', 'Sodium benzoate'],
+    equation: '2 C₆H₅CHO --conc. NaOH--> C₆H₅CH₂OH + C₆H₅COONa',
+    mechanism: [
+      'Hydride transfer from the alkoxide to a second carbonyl.',
+      'One molecule is oxidised, the other reduced (disproportionation).',
+      'Acidification liberates the free acid.',
+    ],
+    keyPoints: [
+      'Only aldehydes without α-hydrogen (HCHO, C₆H₅CHO).',
+      'Crossed Cannizzaro uses HCHO as the sacrificial reductant.',
+    ],
+    steps: [
+      { id: 'cz-1', label: 'Benzaldehyde', detail: 'No α-hydrogen' },
+      { id: 'cz-2', label: 'Conc. NaOH', detail: 'Hydride transfer' },
+      { id: 'cz-3', label: 'Cannizzaro Reaction', detail: 'Disproportionation' },
+      { id: 'cz-4', label: 'Alcohol + Acid salt', detail: 'Benzyl alcohol + sodium benzoate' },
+    ],
+  },
+  {
+    id: 'rxn-sandmeyer',
+    slug: 'sandmeyer-reaction',
+    name: 'Sandmeyer Reaction',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Amines',
+    reactants: ['Aniline'],
+    reagents: ['NaNO₂ + HCl', 'CuCl / CuCN'],
+    conditions: '0–5 °C diazotisation, then warm with Cu(I) salt',
+    products: ['Chlorobenzene'],
+    equation: 'C₆H₅NH₂ --NaNO₂/HCl, 0–5 °C--> C₆H₅N₂⁺Cl⁻ --CuCl--> C₆H₅Cl + N₂',
+    mechanism: [
+      'Diazotisation of the primary amine gives the diazonium salt.',
+      'Cu(I) mediates single-electron transfer to release N₂.',
+      'The aryl radical couples with the halide.',
+    ],
+    keyPoints: [
+      'Diazonium salts must be kept cold — they decompose above 5 °C.',
+      'The same intermediate gives phenols with warm water.',
+    ],
+    steps: [
+      { id: 'sm-1', label: 'Aniline', detail: 'Primary aromatic amine' },
+      { id: 'sm-2', label: 'NaNO₂ + HCl, 0–5 °C', detail: 'Diazotisation' },
+      { id: 'sm-3', label: 'Sandmeyer Reaction', detail: 'CuCl-mediated substitution' },
+      { id: 'sm-4', label: 'Chlorobenzene', detail: 'Aryl halide + N₂' },
+    ],
+  },
+  {
+    id: 'rxn-hoffmann',
+    slug: 'hoffmann-bromamide',
+    name: 'Hoffmann Bromamide Degradation',
+    family: 'Name reaction',
+    subjectId: 'chemistry',
+    chapter: 'Amines',
+    reactants: ['Propanamide'],
+    reagents: ['Br₂', 'NaOH'],
+    conditions: 'Aqueous NaOH, reflux',
+    products: ['Ethanamine'],
+    equation: 'CH₃CH₂CONH₂ + Br₂ + 4NaOH → CH₃CH₂NH₂ + Na₂CO₃ + 2NaBr + 2H₂O',
+    mechanism: [
+      'Base deprotonates the amide → N-bromoamide.',
+      'Rearrangement migrates the alkyl group to nitrogen.',
+      'Loss of bromide gives the isocyanate, hydrolysed to the amine.',
+    ],
+    keyPoints: [
+      'The product has one carbon LESS than the amide — chain shortens.',
+      'Gives a primary amine without over-alkylation.',
+    ],
+    steps: [
+      { id: 'hb-1', label: 'Propanamide', detail: 'Amide substrate' },
+      { id: 'hb-2', label: 'Br₂ + NaOH', detail: 'N-bromo intermediate' },
+      { id: 'hb-3', label: 'Hoffmann Degradation', detail: 'Rearrangement with loss of CO' },
+      { id: 'hb-4', label: 'Ethanamine', detail: 'Primary amine, one carbon shorter' },
+    ],
+  },
+  {
+    id: 'rxn-wurtz',
+    slug: 'wurtz-reaction',
+    name: 'Wurtz Reaction',
+    family: 'Coupling reaction',
+    subjectId: 'chemistry',
+    chapter: 'Haloalkanes and Haloarenes',
+    reactants: ['CH₃Br'],
+    reagents: ['Sodium metal', 'Dry ether'],
+    conditions: 'Dry ether, inert atmosphere',
+    products: ['Ethane'],
+    equation: '2 CH₃Br + 2 Na --dry ether--> C₂H₆ + 2 NaBr',
+    mechanism: [
+      'Sodium donates an electron to form organosodium species.',
+      'Coupling of two alkyl fragments releases the alkane.',
+    ],
+    keyPoints: [
+      'Only useful for symmetrical alkanes.',
+      'Mixed Wurtz gives a statistical mixture — avoid in the exam.',
+    ],
+    steps: [
+      { id: 'wt-1', label: 'CH₃Br', detail: 'Alkyl halide' },
+      { id: 'wt-2', label: 'Na / dry ether', detail: 'Single-electron transfer' },
+      { id: 'wt-3', label: 'Wurtz Reaction', detail: 'Radical coupling' },
+      { id: 'wt-4', label: 'Ethane', detail: 'Symmetrical alkane' },
+    ],
+  },
+]
+
+export function getReaction(slug?: string): Reaction | undefined {
+  if (!slug) return undefined
+  return REACTIONS.find((reaction) => reaction.slug === slug || reaction.id === slug)
+}
+
+export function reactionsForChapter(chapter: string): Reaction[] {
+  return REACTIONS.filter((reaction) => reaction.chapter === chapter)
+}

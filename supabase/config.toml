@@ -1,0 +1,61 @@
+# StudyOS — Supabase local development configuration.
+# Minimal, valid config for `supabase start` / `supabase db reset`.
+project_id = "studyos"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[inbucket]
+# Mailpit/Inbucket catch-all used by email sign-up confirmations in local dev.
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173/login"
+additional_redirect_urls = [
+  "http://localhost:5173/login",
+  "http://localhost:5173/",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Local dev: no confirmation click needed (production should flip this).
+enable_confirmations = false
+max_frequency = "1m"
+otp_length = 6
+otp_expiry = 3600
+
+[auth.external.google]
+# Fill these in locally (or export the matching env vars) to test Google OAuth.
+enabled = true
+client_id = "replace-with-google-oauth-client-id"
+secret = "replace-with-google-oauth-client-secret"
+redirect_uri = "http://localhost:54321/auth/v1/callback"
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[analytics]
+enabled = false

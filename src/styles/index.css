@@ -1,0 +1,273 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------
+   StudyOS design tokens
+   A restrained neutral system: one primary accent (indigo),
+   subtle secondary accents, medium radii, deliberate dark mode.
+   --------------------------------------------------------------- */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* Surfaces */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-sunken: var(--surface-sunken);
+
+  /* Lines + text */
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted-fg);
+  --color-faint: var(--faint-fg);
+
+  /* Primary accent */
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-fg: var(--brand-soft-fg);
+  --color-brand-ring: var(--brand-ring);
+
+  /* Secondary accents */
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+
+  /* Scrim behind modals, sheets and the global search */
+  --color-overlay: var(--overlay);
+
+  /* Status */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  /* Subject accents */
+  --color-physics: var(--physics);
+  --color-chemistry: var(--chemistry);
+  --color-mathematics: var(--mathematics);
+  --color-english: var(--english);
+  --color-computer: var(--computer);
+
+  /* Typography */
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Medium corner radii */
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
+  --radius-tile: 0.75rem;
+
+  /* Elevation — subtle, never heavy */
+  --shadow-card: 0 1px 2px rgb(16 16 20 / 0.04);
+  --shadow-raised:
+    0 1px 2px rgb(16 16 20 / 0.05), 0 12px 32px -18px rgb(16 16 20 / 0.28);
+  --shadow-pop:
+    0 2px 4px rgb(16 16 20 / 0.06), 0 24px 48px -24px rgb(16 16 20 / 0.35);
+  --shadow-nav: 0 -1px 0 rgb(16 16 20 / 0.05);
+}
+
+/* ---------------------------------- light ---------------------------------- */
+:root {
+  color-scheme: light;
+
+  --background: #f6f6f4;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #f1f1ef;
+  --surface-sunken: #ebebe8;
+
+  --border: rgb(18 18 22 / 0.09);
+  --border-strong: rgb(18 18 22 / 0.16);
+
+  --foreground: #15151a;
+  --muted-fg: #55555f;
+  --faint-fg: #8b8b95;
+
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-fg: #ffffff;
+  --brand-soft: #eef0ff;
+  --brand-soft-fg: #4338ca;
+  --brand-ring: rgb(79 70 229 / 0.45);
+
+  --accent: #0d9488;
+  --accent-soft: #e6f6f4;
+  --accent-fg: #0f766e;
+
+  --success: #16a34a;
+  --success-soft: #e8f7ee;
+  --warning: #d97706;
+  --warning-soft: #fdf3e3;
+  --danger: #dc2626;
+  --danger-soft: #fdecec;
+
+  --overlay: rgb(16 16 20 / 0.42);
+
+  --physics: #4f46e5;
+  --chemistry: #0d9488;
+  --mathematics: #d97706;
+  --english: #e11d48;
+  --computer: #0284c7;
+}
+
+/* ---------------------------------- dark ----------------------------------- */
+.dark {
+  color-scheme: dark;
+
+  --background: #0a0a0c;
+  --surface: #131316;
+  --surface-raised: #191a1f;
+  --surface-muted: #1e1f25;
+  --surface-sunken: #101114;
+
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.16);
+
+  --foreground: #ededf1;
+  --muted-fg: #9d9da8;
+  --faint-fg: #6d6d78;
+
+  --brand: #7f7cf7;
+  --brand-hover: #9491ff;
+  --brand-fg: #0a0a0c;
+  --brand-soft: rgb(127 124 247 / 0.16);
+  --brand-soft-fg: #b6b4ff;
+  --brand-ring: rgb(127 124 247 / 0.5);
+
+  --accent: #2dd4bf;
+  --accent-soft: rgb(45 212 191 / 0.14);
+  --accent-fg: #5eead4;
+
+  --success: #4ade80;
+  --success-soft: rgb(74 222 128 / 0.14);
+  --warning: #fbbf24;
+  --warning-soft: rgb(251 191 36 / 0.14);
+  --danger: #f87171;
+  --danger-soft: rgb(248 113 113 / 0.14);
+
+  --overlay: rgb(0 0 0 / 0.62);
+
+  --physics: #8b88ff;
+  --chemistry: #2dd4bf;
+  --mathematics: #fbbf24;
+  --english: #fb7185;
+  --computer: #38bdf8;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised:
+    0 1px 2px rgb(0 0 0 / 0.5), 0 16px 40px -20px rgb(0 0 0 / 0.7);
+  --shadow-pop:
+    0 2px 6px rgb(0 0 0 / 0.55), 0 28px 56px -28px rgb(0 0 0 / 0.8);
+  --shadow-nav: 0 -1px 0 rgb(255 255 255 / 0.06);
+}
+
+/* --------------------------------- base ----------------------------------- */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  font-synthesis-weight: none;
+}
+
+/* Visible, consistent keyboard focus */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background-color: var(--brand-soft);
+  color: var(--brand-soft-fg);
+}
+
+/* Android-style momentum scrolling without noisy scrollbars */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+/* Numeric, tabular alignment for stats and timers */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Handwriting-style display for formulae */
+.formula {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.01em;
+}
+
+/* Long academic titles must wrap gracefully on 360px screens */
+.clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Bottom navigation respects the Android gesture bar */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

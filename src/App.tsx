@@ -24,7 +24,29 @@ import FormulaFlowPage from '@/pages/FormulaFlowPage'
 import ReactionLabPage from '@/pages/ReactionLabPage'
 import ProfilePage from '@/pages/ProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
+
+import { AdminLayout } from '@/admin/layout/AdminLayout'
+import { RequireAdmin } from '@/admin/guards/RequireAdmin'
+import AdminLoginPage from '@/admin/pages/AdminLoginPage'
+import AdminDashboardPage from '@/admin/pages/AdminDashboardPage'
+import AdminAnalyticsPage from '@/admin/pages/AdminAnalyticsPage'
 import AdminAiPage from '@/admin/pages/AdminAiPage'
+import AdminContentPage from '@/admin/pages/AdminContentPage'
+import AdminResourceFormPage from '@/admin/pages/AdminResourceFormPage'
+import AdminPyqPage from '@/admin/pages/AdminPyqPage'
+import AdminPyqFormPage from '@/admin/pages/AdminPyqFormPage'
+import AdminPyqImportPage from '@/admin/pages/AdminPyqImportPage'
+import AdminAcademicPage from '@/admin/pages/AdminAcademicPage'
+import AdminBoardsPage from '@/admin/pages/AdminBoardsPage'
+import AdminClassesPage from '@/admin/pages/AdminClassesPage'
+import AdminStreamsPage from '@/admin/pages/AdminStreamsPage'
+import AdminSubjectsPage from '@/admin/pages/AdminSubjectsPage'
+import AdminChaptersPage from '@/admin/pages/AdminChaptersPage'
+import AdminUsersPage from '@/admin/pages/AdminUsersPage'
+import AdminUserDetailPage from '@/admin/pages/AdminUserDetailPage'
+import AdminReportsPage from '@/admin/pages/AdminReportsPage'
+import AdminSettingsPage from '@/admin/pages/AdminSettingsPage'
+import AdminAuditPage from '@/admin/pages/AdminAuditPage'
 
 /**
  * Route map.
@@ -130,15 +152,52 @@ export default function App() {
             }
           />
 
-          {/* Admin → AI (staff only; the edge functions re-check permissions) */}
-          <Route
-            path="/admin/ai"
-            element={
-              <RequireAuth>
-                <AdminAiPage />
-              </RequireAuth>
-            }
-          />
+          {/* Admin → AI lives in the portal's own route tree (below) */}
+        </Route>
+
+        {/* ---------------------------------------------------------------- */}
+        {/* Admin Portal — every screen is guarded; the database re-checks    */}
+        {/* each privileged read/write regardless (RLS + admin_* RPCs).      */}
+        {/* ---------------------------------------------------------------- */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <AdminLayout />
+            </RequireAdmin>
+          }
+        >
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="analytics" element={<AdminAnalyticsPage />} />
+          <Route path="ai" element={<AdminAiPage />} />
+
+          {/* Content */}
+          <Route path="content" element={<AdminContentPage />} />
+          <Route path="content/resources/new" element={<AdminResourceFormPage />} />
+          <Route path="content/resources/:id" element={<AdminResourceFormPage />} />
+          <Route path="content/pyq" element={<AdminPyqPage />} />
+          <Route path="content/pyq/import" element={<AdminPyqImportPage />} />
+          <Route path="content/pyq/new" element={<AdminPyqFormPage />} />
+          <Route path="content/pyq/:id" element={<AdminPyqFormPage />} />
+
+          {/* Academic hierarchy */}
+          <Route path="academic" element={<AdminAcademicPage />} />
+          <Route path="academic/boards" element={<AdminBoardsPage />} />
+          <Route path="academic/classes" element={<AdminClassesPage />} />
+          <Route path="academic/streams" element={<AdminStreamsPage />} />
+          <Route path="academic/subjects" element={<AdminSubjectsPage />} />
+          <Route path="academic/chapters" element={<AdminChaptersPage />} />
+
+          {/* People + moderation */}
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="users/:id" element={<AdminUserDetailPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+
+          {/* System */}
+          <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

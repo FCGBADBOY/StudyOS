@@ -108,6 +108,92 @@ Protected screens live behind `RequireAuth`; unauthenticated visitors are redire
 
 ---
 
+## Admin Portal (`/admin`)
+
+A full content-management portal in the same app: the academic hierarchy, resources, PYQs, users, moderation, analytics, settings and an append-only audit log. The student app is untouched — the portal is a second surface over the same database.
+
+### Routes
+
+| Route | Screen |
+| --- | --- |
+| `/admin/login` | Staff sign-in (same Supabase auth as students) |
+| `/admin` | → `/admin/dashboard` |
+| `/admin/dashboard` | Platform stats, workflow queue, recent activity |
+| `/admin/content` | Resource library — filters, bulk actions, publishing |
+| `/admin/content/resources/new`, `/admin/content/resources/:id` | Resource editor: upload, preview, versions |
+| `/admin/content/pyq` | PYQ archive browser |
+| `/admin/content/pyq/new`, `/admin/content/pyq/:id` | PYQ editor (equation-ready, HTML-safe) |
+| `/admin/content/pyq/import` | CSV / JSON bulk import with row-level validation |
+| `/admin/academic` | Hierarchy overview with counts |
+| `/admin/academic/(boards\|classes\|streams\|subjects\|chapters)` | One CRUD screen per level |
+| `/admin/users`, `/admin/users/:id` | Directory, role changes, suspension, read-only learning data |
+| `/admin/reports` | Moderation queue + content-quality dashboard |
+| `/admin/analytics` | Growth, popularity, accuracy |
+| `/admin/ai` | AI Studio (embedding queue, usage) |
+| `/admin/audit` | Append-only audit log |
+| `/admin/settings` | Upload, workflow, platform settings + permission matrix |
+
+Everything under `/admin/*` is wrapped in `RequireAdmin`. Students see **"Access Denied — You don't have permission to access the Admin Portal."** with exits back to the app; signed-out visitors go to `/admin/login?next=…`.
+
+### Roles and where permission is actually enforced
+
+Five roles: `student`, `content_editor`, `moderator`, `admin`, `super_admin`.
+
+**The frontend never decides who is allowed to do something.** `src/admin/lib/permissions.ts` is a *cosmetic mirror* of the database matrix — it only hides buttons that would always fail. The real gate is server-side:
+
+- `role_permissions` (migration `…0001`) is the role → permission matrix.
+- `has_permission(text)` / `has_role(…)` / `is_admin_user()` are `SECURITY DEFINER` helpers called inside Row Level Security policies (migration `…0003`) and by the `admin_*` RPCs.
+- `guard_profile_role()` blocks privilege escalation: since `profiles` is owner-writable, a student editing their own row cannot set `role = 'admin'` — the trigger rejects it.
+- Role changes and suspensions go through `admin_set_user_role()` / `admin_set_user_suspended()`, which re-check permission, forbid self-promotion and reserve `super_admin` grants for super admins.
+
+A student who forges the UI, edits localStorage or calls PostgREST directly gets a `42501` from PostgreSQL. The `admin_user_directory` view is `security_invoker = false` and filters on `has_permission('users.view')`, so a student reads **zero rows** (not an error) and never sees an email they shouldn't.
+
+### Content workflow
+
+```
+Draft → Pending Review → Approved → Published → Archived
+                     ↘ Rejected
+```
+
+- `status` is the source of truth; `is_published` is a derived flag kept in sync by `sync_resource_status()` so the student app keeps working unchanged.
+- `created_by` / `updated_by` / `reviewed_by` / `published_at` / `updated_at` record who did what. Editors may submit for review; only publisher-capable roles may publish, and `platform_settings.content.require_review` can force review for everyone.
+- Every saved resource writes a `resource_versions` snapshot (`snapshot_resource_version()` AFTER trigger), so the editor can diff and roll back to any earlier version.
+- Nothing referenced is ever hard-deleted: hierarchy levels and questions are **archived** (public read policies filter on `not is_archived`, staff policies don't), which hides them from students and keeps every link restorable.
+
+### Uploads and bulk import
+
+- Storage upload accepts **PDF / PNG / JPG / WEBP** up to a configurable size, validated in the browser *and* by storage policy. Order is deliberate: **storage path → DB metadata → resource row**, so an orphan file is never referenced by content.
+- Resource preview (signed URL, rendered metadata, workflow status) is available before publishing.
+- PYQ bulk import takes **CSV or JSON**, normalises column aliases, validates every row, and flags **possible duplicates** against the existing archive. Rows are imported independently and reported by line number — one bad row never fails the batch, and duplicates are skipped by choice, never merged or deleted.
+
+### Reports, moderation and audit
+
+- Students file one of six report types (`incorrect_question`, `wrong_answer`, `broken_resource`, `inappropriate_content`, `duplicate_content`, `other`); moderators move them `Open → Investigating → Resolved / Dismissed` with a resolution note, individually or in bulk (always behind a confirmation).
+- The Content Quality panel surfaces content that *looks* wrong (missing thumbnails, no source, stuck drafts) before anyone reports it.
+- `log_admin_action()` (SECURITY DEFINER) is the only writer of `audit_logs` — there is no client INSERT policy, so entries cannot be forged. It strips anything credential-shaped from `metadata`. The portal can read the log but never edit it.
+
+### Admin demo mode
+
+With no Supabase credentials the portal grants `super_admin` and persists mutations to localStorage (`admin:*` keys), so the whole workflow — publishing, archiving, role changes, imports — is demonstrable offline. With credentials present, every read and write is real and RLS-bound.
+
+### Layout of the admin code
+
+```
+src/admin/
+├── animations/    Admin motion set (pageEnter, statCounter, uploadProgress, …)
+├── components/    DataTable, charts, feedback, hierarchy manager, filters
+├── config/        Navigation (permission-gated links)
+├── guards/        RequireAdmin + AccessDenied
+├── hooks/         useAdminSession (role, staff check, demo flag)
+├── layout/        AdminLayout — sidebar, mobile drawer, top bar, outlet
+├── lib/           permissions.ts — cosmetic mirror of role_permissions
+├── pages/         One file per route above
+├── services/      The only code that talks to Supabase (admin_* RPCs, tables, storage)
+└── types/admin.ts Shared admin model
+```
+
+---
+
 ## Architecture
 
 ```

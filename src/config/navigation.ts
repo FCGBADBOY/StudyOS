@@ -17,6 +17,7 @@ import {
   TrendingUp,
   UserRound,
   ClipboardList,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -68,6 +69,8 @@ export const SIDEBAR_NAV: { title: string; items: NavItem[] }[] = [
     items: [
       { label: 'Profile', to: '/profile', icon: UserRound, match: ['/profile'] },
       { label: 'Settings', to: '/settings', icon: Settings2 },
+      /* Staff-only page: non-admins get a "Staff only" empty state. */
+      { label: 'AI Dashboard', to: '/admin/ai', icon: Sparkles, match: ['/admin'] },
     ],
   },
 ]

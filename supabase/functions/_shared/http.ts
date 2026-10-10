@@ -66,6 +66,16 @@ export function isAppError(error: unknown): error is AppError {
 /** Map whatever went wrong onto a code + message we are willing to show. */
 export function toAppError(error: unknown): AppError {
   if (isAppError(error)) return error
+
+  const code = (error as { code?: unknown } | null)?.code
+  if (typeof code === 'string' && code in STATUS) {
+    const message = error instanceof Error ? error.message : 'Request failed.'
+    return new AppError(code as ErrorCode, message)
+  }
+  if (error instanceof Error && error.name === 'ProviderNotConfiguredError') {
+    return new AppError('no_provider', error.message)
+  }
+
   const message = error instanceof Error ? error.message : String(error)
   if (/timed? ?out|aborterror|deadline/i.test(message)) {
     return new AppError('provider_timeout', 'The tutor took too long to reply. Please try again.')

@@ -41,6 +41,8 @@ import { getMistakes } from './mistakebook.service'
 export interface DashboardData {
   snapshot: ProgressSnapshot
   focus: TodayFocus | null
+  /** Explainable "why this, why now" list — the same signals as `focus`. */
+  recommendations: StudyRecommendation[]
   continueStudying: ContinueItem[]
   weakChapters: WeakChapter[]
   exams: Exam[]
@@ -49,6 +51,20 @@ export interface DashboardData {
   syllabus: { completed: number; total: number; percent: number }
   todayMinutes: number
   goalMinutes: number
+}
+
+/** One explainable recommendation shown under "Today's study". */
+export interface StudyRecommendation {
+  id: string
+  title: string
+  subjectName: string
+  subjectSlug: string
+  minutes: number
+  difficulty: 'Easy' | 'Moderate' | 'Hard'
+  progress: number
+  score: number
+  /** Human sentence per signal, with the points it contributed. */
+  reasons: Array<{ label: string; points: number }>
 }
 
 /* ------------------------------ recommendations --------------------------- */
@@ -65,6 +81,8 @@ interface FocusCandidate {
   lastStudied: string | null
   score: number
   reasons: string[]
+  /** Same story as `reasons`, but with the points each signal contributed. */
+  signals: Array<{ label: string; points: number }>
 }
 
 /**
@@ -90,27 +108,38 @@ export function rankFocusCandidates(input: {
       const lastStudied = input.lastStudiedByChapter.get(chapter.id) ?? null
       const pyqCount = input.pyqByChapter.get(chapter.id) ?? 0
       const reasons: string[] = []
+      const signals: Array<{ label: string; points: number }> = []
       let score = 0
 
       if (weakIds.has(chapter.id) || (accuracy !== undefined && accuracy < 55)) {
         score += 40
+        const label = accuracy !== undefined ? `recent accuracy is ${accuracy}%` : 'it is on your weak-chapter list'
         reasons.push('a weak chapter for you')
+        signals.push({ label, points: 40 })
       }
       if (input.examSoon && input.examSubjects.has(chapter.subjectSlug)) {
         score += 25
         reasons.push('an exam is coming up')
+        signals.push({ label: `${chapter.subjectName} exam is within 14 days`, points: 25 })
       }
       const idleFor = lastStudied ? (now.getTime() - new Date(lastStudied).getTime()) / 3_600_000 : Infinity
       if (idleFor > 48) {
         score += 15
         reasons.push(lastStudied ? 'you have not touched it in a while' : 'you have not started it yet')
+        signals.push({
+          label: lastStudied ? `no activity for ${Math.round(idleFor)}h` : 'not started yet',
+          points: 15,
+        })
       }
       if (chapter.progress < 50) {
         score += 10
+        signals.push({ label: `only ${chapter.progress}% of the chapter is covered`, points: 10 })
       }
       if (pyqCount > 0) {
-        score += Math.min(15, pyqCount)
+        const points = Math.min(15, pyqCount)
+        score += points
         reasons.push(`asked ${pyqCount} time${pyqCount === 1 ? '' : 's'} in the archive`)
+        signals.push({ label: `${pyqCount} past-year question${pyqCount === 1 ? '' : 's'} in the archive`, points })
       }
 
       return {
@@ -125,9 +154,28 @@ export function rankFocusCandidates(input: {
         lastStudied,
         score,
         reasons,
+        signals,
       }
     })
     .sort((a, b) => b.score - a.score)
+}
+
+/** Top-N explainable recommendations (same ranking as the hero card). */
+export function toRecommendations(candidates: FocusCandidate[], limit = 3): StudyRecommendation[] {
+  return candidates
+    .filter((candidate) => candidate.score > 0)
+    .slice(0, limit)
+    .map((candidate) => ({
+      id: candidate.chapterId,
+      title: candidate.chapter,
+      subjectName: candidate.subjectName,
+      subjectSlug: candidate.subjectId,
+      minutes: candidate.progress < 50 ? 45 : 30,
+      difficulty: (candidate.accuracy < 45 ? 'Hard' : candidate.accuracy < 70 ? 'Moderate' : 'Easy') as StudyRecommendation['difficulty'],
+      progress: candidate.progress,
+      score: candidate.score,
+      reasons: candidate.signals,
+    }))
 }
 
 function toFocus(candidate: FocusCandidate): TodayFocus {
@@ -161,9 +209,27 @@ export async function getDashboard(): Promise<DashboardData> {
     const totalChapters = 58
     const completedChapters = DEMO_PROFILE.chaptersCompleted
 
+    /* Same explainable shape as live mode, from the bundled sample dataset. */
+    const recommendations: StudyRecommendation[] = weak.slice(0, 3).map((chapter, index) => ({
+      id: chapter.id,
+      title: chapter.chapter,
+      subjectName: chapter.subjectName,
+      subjectSlug: chapter.subjectId,
+      minutes: index === 0 ? 45 : 30,
+      difficulty: (chapter.accuracy < 45 ? 'Hard' : chapter.accuracy < 70 ? 'Moderate' : 'Easy') as StudyRecommendation['difficulty'],
+      progress: chapter.progress,
+      score: 100 - index,
+      reasons: [
+        { label: `recent accuracy is ${chapter.accuracy}%`, points: 40 },
+        { label: `only ${chapter.progress}% of the chapter is covered`, points: 10 },
+        { label: `${openMistakes} open mistakes to revise`, points: 10 },
+      ],
+    }))
+
     return {
       snapshot: DEMO_SNAPSHOT,
       focus: DEMO_FOCUS,
+      recommendations,
       continueStudying: DEMO_CONTINUE,
       weakChapters: weak,
       exams: DEMO_EXAMS.filter((exam) => exam.date >= dayKey(new Date().toISOString())),
@@ -235,6 +301,7 @@ export async function getDashboard(): Promise<DashboardData> {
 
   const top = ranked[0]
   const focus = top && top.score > 0 ? toFocus(top) : null
+  const recommendations = toRecommendations(ranked, 3)
 
   /* Continue studying: opened but unfinished, most recent first. */
   const continueStudying: ContinueItem[] = activity.progress
@@ -271,6 +338,7 @@ export async function getDashboard(): Promise<DashboardData> {
   return {
     snapshot,
     focus,
+    recommendations,
     continueStudying,
     weakChapters,
     exams,

@@ -24,6 +24,7 @@ import FormulaFlowPage from '@/pages/FormulaFlowPage'
 import ReactionLabPage from '@/pages/ReactionLabPage'
 import ProfilePage from '@/pages/ProfilePage'
 import SettingsPage from '@/pages/SettingsPage'
+import AdminAiPage from '@/admin/pages/AdminAiPage'
 
 /**
  * Route map.
@@ -125,6 +126,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <SettingsPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* Admin → AI (staff only; the edge functions re-check permissions) */}
+          <Route
+            path="/admin/ai"
+            element={
+              <RequireAuth>
+                <AdminAiPage />
               </RequireAuth>
             }
           />

@@ -202,6 +202,43 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {/* Explainable recommendations — why each chapter, in points */}
+      {data.recommendations.length > 0 && (
+        <section aria-labelledby="recommended">
+          <SectionHeader
+            id="recommended"
+            title="Recommended for you"
+            subtitle="Same rules as Today's study — every reason shows its points"
+          />
+          <ul role="list" className="space-y-3">
+            {data.recommendations.map((item) => (
+              <li key={item.id} className="rounded-card border border-border bg-surface p-4 shadow-card">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="brand">{item.subjectName}</Badge>
+                  <Badge variant="outline">{item.difficulty}</Badge>
+                  <span className="tabular text-[12px] text-faint">{formatDuration(item.minutes)}</span>
+                  <span className="tabular ml-auto text-[12px] font-semibold text-muted">
+                    {item.score} pts
+                  </span>
+                </div>
+                <h3 className="mt-2 text-[15px] font-semibold leading-snug text-foreground">{item.title}</h3>
+                <ul role="list" className="mt-2 space-y-1">
+                  {item.reasons.map((reason) => (
+                    <li key={reason.label} className="flex items-center justify-between gap-3 text-[12px] text-muted">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <Sparkles aria-hidden className="h-3 w-3 shrink-0 text-brand" />
+                        <span className="min-w-0 truncate">{reason.label}</span>
+                      </span>
+                      <span className="tabular shrink-0 text-faint">+{reason.points}</span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Quick actions */}
       <section aria-labelledby="quick-actions">
         <SectionHeader id="quick-actions" title="Quick actions" subtitle="Jump straight into a study mode" />

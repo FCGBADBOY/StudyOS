@@ -15,26 +15,29 @@ import {
   useState,
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
 } from 'react'
-import { Check, Clock, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { CalendarDays, Check, Clock, Plus, Sparkles, Timer, Trash2 } from 'lucide-react'
 import {
+  BackgroundArt,
   Badge,
   BottomSheet,
   Button,
   EmptyState,
   ErrorState,
   IconButton,
+  Illustration,
   Input,
-  PageHeader,
   SectionHeader,
   Select,
   SkeletonList,
   Slider,
+  StatCard,
   TabPanel,
 } from '@/components/ui'
 import type { BadgeVariant } from '@/components/ui'
 import { useCountUp, usePlanner, useStagger, useSubjects } from '@/hooks'
-import { celebrate, checkComplete } from '@/animations'
+import { celebrate, checkComplete, successPop } from '@/animations'
 import { useToast } from '@/context/AppProvider'
 import { invalidateQueries } from '@/lib/query'
 import {
@@ -43,6 +46,7 @@ import {
   markSessionComplete,
   updateStudySession,
 } from '@/services/planner.service'
+import { themeColors } from '@/config/visual'
 import { formatDuration, formatShortDate } from '@/utils/format'
 import { subjectAccent } from '@/utils/subject'
 import { cn } from '@/utils/cn'
@@ -149,34 +153,42 @@ function isPending(query: { data: unknown; error: string | null; source: string 
 
 /* ------------------------------- stat tiles ------------------------------- */
 
-function StatTile({
+/** Live daily stat — the number counts up, the hint stays honest. */
+function DayStat({
   value,
   label,
   hint,
+  icon,
+  accent,
   decimals = 0,
 }: {
   value: number
   label: string
   hint: string
+  icon: ReactNode
+  accent: 'planner' | 'success' | 'brand'
   decimals?: number
 }) {
   const counter = useCountUp<HTMLSpanElement>(value, { decimals })
 
   return (
-    <div className="rounded-tile border border-border bg-surface p-3 shadow-card">
-      <span
-        ref={counter}
-        aria-hidden
-        className="tabular block text-xl font-bold leading-none text-foreground sm:text-2xl"
-      >
-        0
-      </span>
-      <span className="sr-only">
-        {value} {label}
-      </span>
-      <span className="mt-2 block text-[11px] font-semibold leading-tight text-muted">{label}</span>
-      <span className="mt-0.5 block truncate text-[11px] text-faint">{hint}</span>
-    </div>
+    <StatCard
+      className="h-full"
+      label={label}
+      icon={icon}
+      accent={accent}
+      trend={hint}
+      value={
+        <>
+          <span ref={counter} aria-hidden>
+            0
+          </span>
+          <span className="sr-only">
+            {value} {label}
+          </span>
+        </>
+      }
+    />
   )
 }
 
@@ -213,6 +225,7 @@ function TaskRow({
     if (next) {
       checkComplete(controlRef.current, pathRef.current)
       celebrate(celebrationRef.current)
+      successPop(celebrationRef.current, { intensity: 0.5 })
       toast({
         title: 'Session complete',
         description: `${session.topic} · ${formatDuration(session.duration)} logged`,
@@ -227,14 +240,20 @@ function TaskRow({
     <li
       data-task
       className={cn(
-        'relative overflow-hidden rounded-card border border-border bg-surface shadow-card transition-colors duration-200',
-        session.completed && 'border-success/40 bg-success-soft/40',
+        'relative overflow-hidden rounded-card shadow-card transition-colors duration-200',
+        session.completed ? 'bg-success-soft' : 'bg-surface',
       )}
     >
+      {/* the subject rail — every block reads as its own hue at a glance */}
+      <span
+        aria-hidden
+        className={cn('absolute inset-y-0 left-0 w-1.5', session.completed ? 'bg-success' : accent.solid)}
+      />
+
       <span
         ref={celebrationRef}
         aria-hidden
-        className="pointer-events-none absolute left-4 top-1/2 h-6 w-6 -translate-y-1/2"
+        className="pointer-events-none absolute left-6 top-1/2 h-6 w-6 -translate-y-1/2"
       >
         <span
           data-celebrate-ring
@@ -262,7 +281,7 @@ function TaskRow({
         />
       </span>
 
-      <div className="flex items-start gap-2 p-3 sm:gap-3 sm:p-4">
+      <div className="flex items-start gap-2 py-3.5 pl-5 pr-3 sm:gap-3 sm:py-4 sm:pl-6 sm:pr-4">
         <button
           ref={controlRef}
           type="button"
@@ -272,9 +291,10 @@ function TaskRow({
           onClick={toggle}
           className={cn(
             'mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-tile border-2 transition-colors duration-200',
+            'outline-none focus-visible:ring-2 focus-visible:ring-brand-ring',
             session.completed
               ? 'border-success bg-success'
-              : 'border-border-strong bg-surface hover:border-brand',
+              : 'border-border-strong bg-surface-muted hover:border-brand',
           )}
         >
           <svg
@@ -297,7 +317,7 @@ function TaskRow({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant="neutral" className={accent.text}>
+            <Badge theme={accent.theme} dot>
               {session.subjectName}
             </Badge>
             <Badge variant={kind.tone}>{kind.label}</Badge>
@@ -636,15 +656,38 @@ export default function PlannerPage() {
   }
 
   const header = (
-    <PageHeader
-      title="Study Planner"
-      subtitle="One week, one timeline. Protect your focus blocks, tick them off and let the planner re-sequence the rest."
-      actions={
-        <Button icon={<Plus />} disabled={!day} onClick={() => setSheetOpen(true)}>
-          Add task
-        </Button>
-      }
-    />
+    <section
+      aria-labelledby="planner-hero"
+      className="relative isolate overflow-hidden rounded-hero bg-cream shadow-card"
+    >
+      <BackgroundArt theme="planner" variant="band" geometry intensity="subtle" />
+
+      <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.6fr_1fr] lg:items-center lg:p-10">
+        <div className="min-w-0">
+          <p className="eyebrow">Your week</p>
+          <h1
+            id="planner-hero"
+            className="text-display mt-2 text-[32px] leading-[0.98] text-foreground sm:text-[44px]"
+          >
+            Study <span className={themeColors('planner').onSoft}>Planner</span>
+          </h1>
+          <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-muted">
+            One week, one timeline. Protect your focus blocks, tick them off and let the planner
+            re-sequence the rest.
+          </p>
+
+          <div className="mt-5">
+            <Button icon={<Plus />} disabled={!day} onClick={() => setSheetOpen(true)}>
+              Add task
+            </Button>
+          </div>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-[280px] lg:max-w-none">
+          <Illustration name="calendar" theme="planner" decorative className="w-full" />
+        </div>
+      </div>
+    </section>
   )
 
   /* -------------------------------- states -------------------------------- */
@@ -666,6 +709,8 @@ export default function PlannerPage() {
           title="We could not load your week"
           description="Your planner did not respond. Check your connection and try again."
           onRetry={planner.refetch}
+          illustration="notebook"
+          theme="planner"
         />
       </div>
     )
@@ -678,6 +723,8 @@ export default function PlannerPage() {
         <EmptyState
           title="Your week is empty — add a session"
           description="Plan one focus block and the timeline fills up around it."
+          illustration="calendar"
+          theme="planner"
           action={
             <Button icon={<Plus />} onClick={() => setSheetOpen(true)}>
               Add a session
@@ -692,23 +739,40 @@ export default function PlannerPage() {
     <div className="space-y-6 sm:space-y-8">
       {header}
 
+      {/* live daily stats */}
       <section
         aria-label={`${isToday ? 'Today' : day.day} summary`}
-        className="grid grid-cols-3 gap-2 sm:gap-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
-        <StatTile value={planned} label="Tasks planned" hint={formatShortDate(day.date)} />
-        <StatTile value={completed} label="Completed" hint={`of ${planned}`} />
-        <StatTile
+        <DayStat
+          value={planned}
+          label="Tasks planned"
+          hint={formatShortDate(day.date)}
+          icon={<CalendarDays />}
+          accent="planner"
+        />
+        <DayStat
+          value={completed}
+          label="Completed"
+          hint={`of ${planned}`}
+          icon={<Check />}
+          accent="success"
+        />
+        <DayStat
           value={focusHours}
           label="Focus hours"
           hint={`${plannedMinutes} min blocked`}
+          icon={<Timer />}
+          accent="brand"
           decimals={1}
         />
       </section>
 
+      {/* week strip */}
       <section aria-labelledby="week-strip-heading" className="space-y-3">
         <SectionHeader
           id="week-strip-heading"
+          eyebrow="Week strip"
           title="This week"
           subtitle={isToday ? 'You are looking at today' : 'Pick a day to see its timeline'}
         />
@@ -717,7 +781,7 @@ export default function PlannerPage() {
           role="tablist"
           aria-label="Days of the week"
           onKeyDown={onStripKeyDown}
-          className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar"
+          className="flex gap-2 overflow-x-auto pb-1 no-scrollbar"
         >
           {days.map((entry) => {
             const active = entry.id === activeId
@@ -733,10 +797,11 @@ export default function PlannerPage() {
                 tabIndex={active ? 0 : -1}
                 onClick={() => setSelectedId(entry.id)}
                 className={cn(
-                  'flex h-14 min-w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-tile border px-2 transition-colors duration-150',
+                  'flex h-16 min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-tile px-2.5 outline-none transition-shadow duration-150',
+                  'focus-visible:ring-2 focus-visible:ring-brand-ring',
                   active
-                    ? 'border-brand bg-brand-soft text-brand-soft-fg'
-                    : 'border-border bg-surface text-muted hover:border-border-strong hover:text-foreground',
+                    ? 'bg-brand-soft text-brand-soft-fg shadow-raised'
+                    : 'bg-surface text-muted shadow-card hover:text-foreground hover:shadow-raised',
                 )}
               >
                 <span className="text-[11px] font-semibold">{entry.day}</span>
@@ -748,10 +813,7 @@ export default function PlannerPage() {
                 ) : (
                   <span
                     aria-hidden
-                    className={cn(
-                      'h-1 w-1 rounded-full',
-                      active ? 'bg-brand' : 'bg-border-strong',
-                    )}
+                    className={cn('h-1 w-1 rounded-full', active ? 'bg-brand' : 'bg-border-strong')}
                   />
                 )}
               </button>
@@ -760,9 +822,11 @@ export default function PlannerPage() {
         </div>
       </section>
 
+      {/* timeline */}
       <section aria-labelledby="timeline-heading" className="space-y-3">
         <SectionHeader
           id="timeline-heading"
+          eyebrow="Timeline"
           title={`${day.day} timeline`}
           subtitle={
             isToday
@@ -782,6 +846,8 @@ export default function PlannerPage() {
               compact
               title={`Nothing planned for ${day.day}`}
               description="Add a task by hand or let the planner generate a priority-ordered plan for the day."
+              illustration="calendar"
+              theme="planner"
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <Button icon={<Plus />} onClick={() => setSheetOpen(true)}>
@@ -814,6 +880,7 @@ export default function PlannerPage() {
         onClose={() => setSheetOpen(false)}
         title="Add a study task"
         description={`Drops into ${day.day}, ${formatShortDate(day.date)} at the next free slot.`}
+        className="rounded-t-hero"
       >
         <form onSubmit={submitTask} className="space-y-4">
           <Input

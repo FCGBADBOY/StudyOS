@@ -1,13 +1,15 @@
 import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CalendarRange, ChevronRight, FileText, Repeat, ScanLine } from 'lucide-react'
-import type { PyqDifficulty, SubjectId } from '@/types'
+import type { PyqDifficulty } from '@/types'
 import {
+  BackgroundArt,
   Badge,
   Card,
   EmptyState,
   ErrorState,
-  PageHeader,
+  IconTile,
+  Illustration,
   ProgressBar,
   ProgressRing,
   SectionHeader,
@@ -17,6 +19,7 @@ import { ConceptCard } from '@/components/ConceptCard'
 import { useCountUp, usePyqOverview, usePyqPapers, useReveal, useStagger, useSubjects } from '@/hooks'
 import { animateBar } from '@/animations'
 import { subjectAccent } from '@/utils/subject'
+import { themeColors } from '@/config/visual'
 import { cn } from '@/utils/cn'
 
 /* --------------------------------- static --------------------------------- */
@@ -33,13 +36,8 @@ const SLICE_TONE: Record<PyqDifficulty, string> = {
   Hard: 'bg-danger',
 }
 
-const RING_COLOR: Record<SubjectId, string> = {
-  physics: 'var(--physics)',
-  chemistry: 'var(--chemistry)',
-  mathematics: 'var(--mathematics)',
-  english: 'var(--english)',
-  'computer-science': 'var(--computer)',
-}
+/** Accent handles for the archive's own identity. */
+const PYQ_COLORS = themeColors('pyq')
 
 interface HeroStat {
   label: string
@@ -151,13 +149,79 @@ export default function PyqHomePage() {
     .map((slice) => `${slice.label} ${slice.value}%`)
     .join(', ')
 
+  /* ---------------------------------------------------------------------- */
+  /* Header — an editorial hero band with the four ticking counters.         */
+  /* Rendered in every state so loading and error screens keep their frame.  */
+  /* ---------------------------------------------------------------------- */
   const header = (
-    <PageHeader
-      size="lg"
-      title="PYQ Intelligence"
-      subtitle="15 years of CBSE papers, decomposed into what actually repeats."
-      actions={<Badge variant="brand" size="md">Class 12 · CBSE</Badge>}
-    />
+    <section
+      aria-labelledby="pyq-hero"
+      className="relative isolate overflow-hidden rounded-hero bg-cream shadow-card"
+    >
+      <BackgroundArt theme="pyq" geometry intensity="subtle" />
+      <span
+        aria-hidden
+        className="pattern-grid pointer-events-none absolute inset-y-0 right-0 hidden w-1/3 opacity-60 sm:block"
+      />
+
+      <div className="relative p-6 sm:p-8 lg:p-10">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0">
+            <p className="eyebrow">Exam analysis</p>
+            <h1
+              id="pyq-hero"
+              className="text-display mt-2 text-[30px] leading-[1.0] text-foreground sm:text-[40px] lg:text-[46px]"
+            >
+              PYQ{' '}
+              <span className="text-brand">INTELLIGENCE.</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">
+              15 years of CBSE papers, decomposed into what actually repeats.
+            </p>
+            <div className="mt-4">
+              <Badge theme="pyq" size="md" dot>
+                Class 12 · CBSE
+              </Badge>
+            </div>
+          </div>
+
+          <div className="hidden w-[200px] shrink-0 sm:block lg:w-[260px]">
+            <Illustration name="paper" theme="pyq" decorative />
+          </div>
+        </div>
+
+        <section aria-label="PYQ corpus at a glance" className="mt-7">
+          <div ref={statsRef} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {heroStats.map((stat) => (
+              <div key={stat.label} className="rounded-card bg-surface p-4 shadow-card">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="eyebrow min-w-0">{stat.label}</p>
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'grid h-8 w-8 shrink-0 place-items-center rounded-tile [&_svg]:h-4 [&_svg]:w-4',
+                      PYQ_COLORS.soft,
+                      PYQ_COLORS.onSoft,
+                    )}
+                  >
+                    {stat.icon}
+                  </span>
+                </div>
+                <p className="mt-3">
+                  <span
+                    ref={stat.value}
+                    className="tabular text-[30px] font-extrabold leading-none text-foreground"
+                  >
+                    0
+                  </span>
+                </p>
+                <p className="mt-2 text-[12px] leading-snug text-muted">{stat.hint}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </section>
   )
 
   /* -------------------------------- states -------------------------------- */
@@ -179,6 +243,8 @@ export default function PyqHomePage() {
           title="We could not load PYQ intelligence"
           description="The question archive did not respond. Check your connection and try again."
           onRetry={overviewQuery.refetch}
+          illustration="paper"
+          theme="pyq"
         />
       </div>
     )
@@ -188,42 +254,11 @@ export default function PyqHomePage() {
     <div className="space-y-6 sm:space-y-8">
       {header}
 
-      {/* ------------------------------ hero stats ------------------------------ */}
-      <section aria-label="PYQ corpus at a glance">
-        <div ref={statsRef} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {heroStats.map((stat) => (
-            <Card key={stat.label} padded className="relative overflow-hidden">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">
-                    {stat.label}
-                  </p>
-                  <p className="mt-2">
-                    <span
-                      ref={stat.value}
-                      className="tabular text-[24px] font-bold leading-none text-foreground sm:text-[26px]"
-                    >
-                      0
-                    </span>
-                  </p>
-                  <p className="mt-2 text-[12px] leading-snug text-muted">{stat.hint}</p>
-                </div>
-                <span
-                  aria-hidden
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-tile bg-brand-soft text-brand-soft-fg [&_svg]:h-[18px] [&_svg]:w-[18px]"
-                >
-                  {stat.icon}
-                </span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
       {/* ------------------------ difficulty distribution ----------------------- */}
       <section aria-labelledby="difficulty-heading">
         <SectionHeader
           id="difficulty-heading"
+          eyebrow="Paper load"
           title="Difficulty distribution"
           subtitle="How the whole question bank splits by paper load"
         />
@@ -231,13 +266,15 @@ export default function PyqHomePage() {
           <EmptyState
             title="Not enough data yet"
             description="Difficulty splits appear once the archive has tagged questions by paper load."
+            illustration="paper"
+            theme="pyq"
           />
         ) : (
           <Card padded>
             <div
               role="img"
               aria-label={`Difficulty distribution: ${difficultySummary}`}
-              className="flex h-3.5 w-full overflow-hidden rounded-full bg-surface-sunken"
+              className="flex h-4 w-full overflow-hidden rounded-full bg-surface-sunken"
             >
               {difficulty.map((slice, index) => (
                 <div
@@ -257,7 +294,7 @@ export default function PyqHomePage() {
                 return (
                   <li
                     key={slice.label}
-                    className="flex items-center justify-between gap-3 rounded-tile border border-border bg-surface-muted px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-tile bg-cream px-3 py-2.5 shadow-card"
                   >
                     <span className="flex min-w-0 items-center gap-2">
                       <span
@@ -288,6 +325,7 @@ export default function PyqHomePage() {
       <section ref={conceptsRef} aria-labelledby="concepts-heading">
         <SectionHeader
           id="concepts-heading"
+          eyebrow="Repeats"
           title="Most repeated concepts"
           subtitle="Ranked by appearances across the full archive"
         />
@@ -295,6 +333,8 @@ export default function PyqHomePage() {
           <EmptyState
             title="No repeated concepts yet"
             description="Concept groups appear once questions share the same tags across years."
+            illustration="paper"
+            theme="pyq"
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -315,6 +355,7 @@ export default function PyqHomePage() {
       <section ref={chaptersRef} aria-labelledby="chapters-heading">
         <SectionHeader
           id="chapters-heading"
+          eyebrow="Frequency by chapter"
           title="Most frequent chapters"
           subtitle={`Question volume measured against a ${CHAPTER_CEILING}-question ceiling`}
         />
@@ -322,6 +363,8 @@ export default function PyqHomePage() {
           <EmptyState
             title="Not enough data yet"
             description="Chapter frequency shows up once the archive has questions filed against the syllabus."
+            illustration="paper"
+            theme="pyq"
           />
         ) : (
           <ul className="space-y-3">
@@ -333,13 +376,17 @@ export default function PyqHomePage() {
               )
               return (
                 <li key={entry.chapter} data-reveal>
-                  <Card padded>
+                  <Card padded className="relative overflow-hidden pl-5 sm:pl-6">
+                    <span
+                      aria-hidden
+                      className={cn('absolute inset-y-0 left-0 w-1.5', accent.solid)}
+                    />
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">
                           {entry.chapter}
                         </p>
-                        <p className={cn('mt-0.5 text-[12px] font-medium', accent.text)}>
+                        <p className={cn('mt-0.5 truncate text-[12px] font-medium', accent.text)}>
                           {subjectLookup.get(entry.subjectId)?.name ?? entry.subjectId}
                         </p>
                       </div>
@@ -371,6 +418,7 @@ export default function PyqHomePage() {
       <section ref={subjectsRef} aria-labelledby="subjects-heading">
         <SectionHeader
           id="subjects-heading"
+          eyebrow="Frequency by subject"
           title="By subject"
           subtitle="Volume, syllabus coverage and how much repeats"
         />
@@ -378,6 +426,8 @@ export default function PyqHomePage() {
           <EmptyState
             title="Not enough data yet"
             description="Per-subject analysis appears once questions are linked to their subjects."
+            illustration="paper"
+            theme="pyq"
           />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -390,27 +440,19 @@ export default function PyqHomePage() {
                   key={stat.subjectId}
                   to={`/pyq/${stat.subjectId}`}
                   data-reveal
-                  className="group block h-full rounded-card"
+                  className="group block h-full rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
                 >
-                  <Card padded className="h-full transition-colors group-hover:border-border-strong">
+                  <Card padded className="h-full transition-shadow group-hover:shadow-raised">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <span
-                          className={cn(
-                            'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide',
-                            accent.soft,
-                            accent.text,
-                          )}
-                        >
-                          {stat.subjectName}
-                        </span>
-                      </div>
+                      <Badge theme={accent.theme} uppercase dot>
+                        {stat.subjectName}
+                      </Badge>
                       <div className="flex shrink-0 flex-col items-center">
                         <ProgressRing
                           value={stat.repeatRate}
                           size={64}
                           stroke={6}
-                          color={RING_COLOR[stat.subjectId]}
+                          color={themeColors(accent.theme).accentVar}
                           label={`${stat.subjectName} repeat rate`}
                         >
                           <span className="tabular text-[12px] font-bold text-foreground">
@@ -425,18 +467,14 @@ export default function PyqHomePage() {
 
                     <dl className="mt-3 grid grid-cols-2 gap-3">
                       <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-wide text-faint">
-                          Questions
-                        </dt>
-                        <dd className="tabular mt-0.5 text-xl font-bold text-foreground">
+                        <dt className="eyebrow">Questions</dt>
+                        <dd className="tabular mt-1 text-xl font-bold text-foreground">
                           {stat.questions.toLocaleString('en-IN')}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[11px] font-semibold uppercase tracking-wide text-faint">
-                          Chapters
-                        </dt>
-                        <dd className="tabular mt-0.5 text-xl font-bold text-foreground">
+                        <dt className="eyebrow">Chapters</dt>
+                        <dd className="tabular mt-1 text-xl font-bold text-foreground">
                           {stat.chaptersCovered}
                           <span className="text-sm font-semibold text-faint">/{totalChapters}</span>
                         </dd>
@@ -459,6 +497,7 @@ export default function PyqHomePage() {
       <section ref={papersSectionRef} aria-labelledby="recent-papers-heading">
         <SectionHeader
           id="recent-papers-heading"
+          eyebrow="Exam papers"
           title="Recent papers"
           subtitle="Full papers with section breakdowns and solutions"
         />
@@ -469,11 +508,15 @@ export default function PyqHomePage() {
             title="We could not load recent papers"
             description="The paper archive did not respond. Check your connection and try again."
             onRetry={papersQuery.refetch}
+            illustration="paper"
+            theme="pyq"
           />
         ) : recentPapers.length === 0 ? (
           <EmptyState
             title="No papers in the archive yet"
             description="Full papers appear here as soon as they are scanned into the bank."
+            illustration="paper"
+            theme="pyq"
           />
         ) : (
           <ul className="space-y-3">
@@ -481,27 +524,36 @@ export default function PyqHomePage() {
               const accent = subjectAccent(paper.subjectId)
               return (
                 <li key={paper.id} data-reveal>
-                  <Link to={`/pyq/${paper.subjectId}/${paper.slug}`} className="block">
-                    <Card padded className="flex items-center gap-3 transition-colors hover:border-border-strong">
-                      <span
-                        aria-hidden
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-tile bg-surface-muted text-muted [&_svg]:h-5 [&_svg]:w-5"
-                      >
-                        <FileText />
-                      </span>
+                  <Link
+                    to={`/pyq/${paper.subjectId}/${paper.slug}`}
+                    className="block rounded-card outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+                  >
+                    <Card padded className="flex items-center gap-3 transition-shadow hover:shadow-raised">
+                      <IconTile
+                        icon={<FileText />}
+                        theme={accent.theme}
+                        variant="gradient"
+                        size="md"
+                      />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {paper.year} {paper.subjectName} · {paper.set}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge theme={accent.theme} uppercase className="tabular">
+                            {paper.year}
+                          </Badge>
+                          <Badge variant="neutral">{paper.set}</Badge>
+                        </div>
+                        <p className="mt-1.5 truncate text-sm font-semibold text-foreground">
+                          {paper.subjectName}
                         </p>
                         <p className={cn('mt-0.5 truncate text-[12px]', accent.text)}>
                           {paper.board} · {paper.duration} · {paper.sections.length} sections
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
-                        <span className="tabular block text-sm font-bold text-foreground">
+                        <span className="tabular block text-lg font-bold leading-none text-foreground">
                           {paper.marks}
                         </span>
-                        <span className="text-[11px] text-faint">marks</span>
+                        <span className="mt-1 block text-[11px] text-faint">marks</span>
                       </div>
                       <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-faint" />
                     </Card>

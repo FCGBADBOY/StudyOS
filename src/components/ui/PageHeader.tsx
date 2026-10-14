@@ -8,12 +8,16 @@ export interface PageHeaderProps {
   title: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
+  /** Small tracked uppercase label above the title — the editorial eyebrow. */
+  eyebrow?: ReactNode
   /** Show a back affordance. */
   back?: boolean | string
   breadcrumb?: ReactNode
   className?: string
-  /** Larger display type for flagship pages (PYQ Intelligence, MistakeBook…). */
+  /** Larger display type for flagship pages (PYQ Intelligence, MistakeBook). */
   size?: 'md' | 'lg'
+  /** Optional decorative art on the trailing side of wide screens. */
+  media?: ReactNode
 }
 
 /** Consistent page title block used across every route. */
@@ -21,10 +25,12 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  eyebrow,
   back,
   breadcrumb,
   className,
   size = 'md',
+  media,
 }: PageHeaderProps) {
   const navigate = useNavigate()
 
@@ -45,21 +51,27 @@ export function PageHeader({
             </IconButton>
           )}
           <div className="min-w-0">
+            {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
             <h1
               className={cn(
-                'font-bold tracking-tight text-foreground',
+                'text-foreground',
                 size === 'lg'
-                  ? 'text-[26px] leading-tight sm:text-3xl'
-                  : 'text-xl leading-tight sm:text-2xl',
+                  ? 'text-display text-[27px] sm:text-[34px]'
+                  : 'text-xl font-bold tracking-tight leading-tight sm:text-2xl',
               )}
             >
               {title}
             </h1>
-            {subtitle && <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{subtitle}</p>}
+            {subtitle && (
+              <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted sm:text-[15px]">
+                {subtitle}
+              </p>
+            )}
           </div>
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
+      {media && <div className="mt-1">{media}</div>}
     </header>
   )
 }
@@ -67,21 +79,43 @@ export function PageHeader({
 export interface SectionHeaderProps {
   title: string
   subtitle?: string
+  /** Tracked uppercase label above the heading. */
+  eyebrow?: string
   action?: ReactNode
   className?: string
   /** Adds an id for aria-labelledby on the section. */
   id?: string
+  /** Tighter bottom margin when the section has no visible gap. */
+  tight?: boolean
 }
 
 /** Section heading with optional trailing action. */
-export function SectionHeader({ title, subtitle, action, className, id }: SectionHeaderProps) {
+export function SectionHeader({
+  title,
+  subtitle,
+  eyebrow,
+  action,
+  className,
+  id,
+  tight = false,
+}: SectionHeaderProps) {
   return (
-    <div className={cn('mb-3 flex items-end justify-between gap-3', className)}>
+    <div
+      className={cn(
+        'flex items-end justify-between gap-3',
+        tight ? 'mb-2' : 'mb-3 sm:mb-4',
+        className,
+      )}
+    >
       <div className="min-w-0">
-        <h2 id={id} className="text-[15px] font-semibold tracking-tight text-foreground sm:text-base">
+        {eyebrow && <p className="eyebrow mb-1">{eyebrow}</p>}
+        <h2
+          id={id}
+          className="text-[16px] font-bold tracking-tight text-foreground sm:text-lg"
+        >
           {title}
         </h2>
-        {subtitle && <p className="mt-0.5 text-[13px] text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-[13px] leading-snug text-muted">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>

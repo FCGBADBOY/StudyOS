@@ -1,45 +1,69 @@
 @import 'tailwindcss';
 
-/* ---------------------------------------------------------------
+/* ---------------------------------------------------------------------------
    StudyOS design tokens
-   A restrained neutral system: one primary accent (indigo),
-   subtle secondary accents, medium radii, deliberate dark mode.
-   --------------------------------------------------------------- */
+   ---------------------------------------------------------------------------
+   A warm, editorial, light-first system. The base is paper — ivory, cream,
+   soft warm grey — and colour arrives through accents rather than through the
+   chrome. Nothing here is a raw hex used in a component: every colour,
+   shadow, radius and duration in the app resolves to a token below.
+
+   Structure:
+     1. @theme        — names the Tailwind utilities (bg-surface, text-muted…)
+     2. :root         — light palette (the primary experience)
+     3. .dark         — warm graphite dark palette (never pure black)
+     4. base          — element defaults
+     5. utilities     — paper texture, gradient fields, display type
+   --------------------------------------------------------------------------- */
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  /* Surfaces */
+  /* ------------------------------- surfaces ------------------------------ */
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-surface-muted: var(--surface-muted);
   --color-surface-sunken: var(--surface-sunken);
+  /* Tinted band used to separate a section without drawing a box. */
+  --color-cream: var(--cream);
+  --color-surface-tint: var(--surface-tint);
 
-  /* Lines + text */
+  /* ------------------------------ lines + text --------------------------- */
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted-fg);
   --color-faint: var(--faint-fg);
 
-  /* Primary accent */
+  /* --------------------------------- brand ------------------------------- */
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-fg: var(--brand-fg);
   --color-brand-soft: var(--brand-soft);
   --color-brand-soft-fg: var(--brand-soft-fg);
   --color-brand-ring: var(--brand-ring);
+  --color-brand-deep: var(--brand-deep);
 
-  /* Secondary accents */
+  /* ------------------------------- secondary ----------------------------- */
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
   --color-accent-fg: var(--accent-fg);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-mint-fg: var(--mint-fg);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-coral-fg: var(--coral-fg);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-fg: var(--amber-fg);
+  --color-sky: var(--sky);
+  --color-sky-soft: var(--sky-soft);
+  --color-sky-fg: var(--sky-fg);
 
-  /* Scrim behind modals, sheets and the global search */
+  /* --------------------------- scrim + status ---------------------------- */
   --color-overlay: var(--overlay);
-
-  /* Status */
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -47,129 +71,234 @@
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
 
-  /* Subject accents */
+  /* ------------------------- subject identities -------------------------- */
   --color-physics: var(--physics);
+  --color-physics-soft: var(--physics-soft);
+  --color-physics-fg: var(--physics-fg);
   --color-chemistry: var(--chemistry);
+  --color-chemistry-soft: var(--chemistry-soft);
+  --color-chemistry-fg: var(--chemistry-fg);
   --color-mathematics: var(--mathematics);
+  --color-mathematics-soft: var(--mathematics-soft);
+  --color-mathematics-fg: var(--mathematics-fg);
   --color-english: var(--english);
+  --color-english-soft: var(--english-soft);
+  --color-english-fg: var(--english-fg);
   --color-computer: var(--computer);
+  --color-computer-soft: var(--computer-soft);
+  --color-computer-fg: var(--computer-fg);
 
-  /* Typography */
+  /* ------------------------------ typography ----------------------------- */
   --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', sans-serif;
+    'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display:
+    'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  /* Medium corner radii */
-  --radius-card: 1rem;
-  --radius-control: 0.625rem;
-  --radius-tile: 0.75rem;
+  /* --------------------------- corner hierarchy -------------------------- */
+  /* Small controls → tiles → cards → hero. Never everything a pill. */
+  --radius-control: 0.75rem;
+  --radius-tile: 0.875rem;
+  --radius-card: 1.25rem;
+  --radius-hero: 1.75rem;
 
-  /* Elevation — subtle, never heavy */
-  --shadow-card: 0 1px 2px rgb(16 16 20 / 0.04);
+  /* ------------------------------ elevation ------------------------------ */
+  /* Warm-tinted, wide and diffused. No heavy black shadows. */
+  --shadow-card:
+    0 1px 2px rgb(64 52 34 / 0.05), 0 6px 16px -10px rgb(64 52 34 / 0.18),
+    0 1px 3px -1px rgb(64 52 34 / 0.06);
   --shadow-raised:
-    0 1px 2px rgb(16 16 20 / 0.05), 0 12px 32px -18px rgb(16 16 20 / 0.28);
+    0 2px 4px rgb(64 52 34 / 0.05), 0 12px 28px -12px rgb(64 52 34 / 0.2),
+    0 2px 8px -4px rgb(64 52 34 / 0.09);
   --shadow-pop:
-    0 2px 4px rgb(16 16 20 / 0.06), 0 24px 48px -24px rgb(16 16 20 / 0.35);
-  --shadow-nav: 0 -1px 0 rgb(16 16 20 / 0.05);
+    0 4px 8px rgb(64 52 34 / 0.06), 0 24px 48px -18px rgb(64 52 34 / 0.22);
+  --shadow-hero:
+    0 8px 20px -8px rgb(64 52 34 / 0.14), 0 32px 64px -24px rgb(64 52 34 / 0.26);
+  --shadow-nav: 0 -1px 0 rgb(64 52 34 / 0.06);
+  /* Soft coloured bloom for an active nav item or a focused feature card. */
+  --shadow-glow: 0 6px 20px -8px var(--brand-ring);
+
+  /* ---------------------------- motion tokens ---------------------------- */
+  --duration-fast: 160ms;
+  --duration-base: 260ms;
+  --duration-slow: 380ms;
 }
 
-/* ---------------------------------- light ---------------------------------- */
+/* ========================================================================== */
+/* Light — the primary experience. Warm paper, cobalt accents.                */
+/* ========================================================================== */
 :root {
   color-scheme: light;
 
-  --background: #f6f6f4;
+  --background: #f7f5f0;
   --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-muted: #f1f1ef;
-  --surface-sunken: #ebebe8;
+  --surface-raised: #fffdf9;
+  --surface-muted: #f2efe8;
+  --surface-sunken: #eae6dc;
+  --cream: #fbf8f1;
+  --surface-tint: #f6f2e9;
 
-  --border: rgb(18 18 22 / 0.09);
-  --border-strong: rgb(18 18 22 / 0.16);
+  --border: rgb(58 50 38 / 0.09);
+  --border-strong: rgb(58 50 38 / 0.17);
 
-  --foreground: #15151a;
-  --muted-fg: #55555f;
-  --faint-fg: #8b8b95;
+  --foreground: #1c1a16;
+  --muted-fg: #635c50;
+  --faint-fg: #968f80;
 
-  --brand: #4f46e5;
-  --brand-hover: #4338ca;
+  --brand: #2350e6;
+  --brand-hover: #1c42c7;
   --brand-fg: #ffffff;
-  --brand-soft: #eef0ff;
-  --brand-soft-fg: #4338ca;
-  --brand-ring: rgb(79 70 229 / 0.45);
+  --brand-soft: #e9eeff;
+  --brand-soft-fg: #1c42c7;
+  --brand-ring: rgb(35 80 230 / 0.4);
+  --brand-deep: #17308c;
 
-  --accent: #0d9488;
-  --accent-soft: #e6f6f4;
-  --accent-fg: #0f766e;
+  --accent: #0e9384;
+  --accent-soft: #e2f6f2;
+  --accent-fg: #0b7267;
 
-  --success: #16a34a;
-  --success-soft: #e8f7ee;
-  --warning: #d97706;
-  --warning-soft: #fdf3e3;
-  --danger: #dc2626;
-  --danger-soft: #fdecec;
+  --mint: #12a678;
+  --mint-soft: #e3f7ee;
+  --mint-fg: #0c7a57;
 
-  --overlay: rgb(16 16 20 / 0.42);
+  --coral: #e2604a;
+  --coral-soft: #fdeae5;
+  --coral-fg: #b8412e;
 
-  --physics: #4f46e5;
-  --chemistry: #0d9488;
-  --mathematics: #d97706;
-  --english: #e11d48;
-  --computer: #0284c7;
+  --amber: #d98c15;
+  --amber-soft: #fcf1dd;
+  --amber-fg: #a1630a;
+
+  --sky: #1583cf;
+  --sky-soft: #e4f2fd;
+  --sky-fg: #0e63a1;
+
+  --success: #17864a;
+  --success-soft: #e6f5ec;
+  --warning: #b8730a;
+  --warning-soft: #fcf1de;
+  --danger: #d23a34;
+  --danger-soft: #fcebea;
+
+  --overlay: rgb(38 32 22 / 0.42);
+
+  /* Each subject owns a hue, a tint and a readable-on-tint foreground. */
+  --physics: #0b84d8;
+  --physics-soft: #e4f2fd;
+  --physics-fg: #0a6aa8;
+
+  --chemistry: #0f9d76;
+  --chemistry-soft: #e3f6ee;
+  --chemistry-fg: #0a7a59;
+
+  --mathematics: #e08a16;
+  --mathematics-soft: #fdf0de;
+  --mathematics-fg: #a6640a;
+
+  --english: #e2604a;
+  --english-soft: #fdeae5;
+  --english-fg: #b8412e;
+
+  --computer: #4a48d8;
+  --computer-soft: #ecebfe;
+  --computer-fg: #3735b0;
+
+  --shadow-glow: 0 6px 20px -8px rgb(35 80 230 / 0.45);
 }
 
-/* ---------------------------------- dark ----------------------------------- */
+/* ========================================================================== */
+/* Dark — warm graphite and soft navy. Never pure black, never purple.        */
+/* ========================================================================== */
 .dark {
   color-scheme: dark;
 
-  --background: #0a0a0c;
-  --surface: #131316;
-  --surface-raised: #191a1f;
-  --surface-muted: #1e1f25;
-  --surface-sunken: #101114;
+  --background: #1a1917;
+  --surface: #211f1c;
+  --surface-raised: #282521;
+  --surface-muted: #2c2925;
+  --surface-sunken: #16150f;
+  --cream: #232019;
+  --surface-tint: #26231d;
 
-  --border: rgb(255 255 255 / 0.08);
-  --border-strong: rgb(255 255 255 / 0.16);
+  --border: rgb(240 232 216 / 0.09);
+  --border-strong: rgb(240 232 216 / 0.17);
 
-  --foreground: #ededf1;
-  --muted-fg: #9d9da8;
-  --faint-fg: #6d6d78;
+  --foreground: #f3efe7;
+  --muted-fg: #aaa396;
+  --faint-fg: #7a7367;
 
-  --brand: #7f7cf7;
-  --brand-hover: #9491ff;
-  --brand-fg: #0a0a0c;
-  --brand-soft: rgb(127 124 247 / 0.16);
-  --brand-soft-fg: #b6b4ff;
-  --brand-ring: rgb(127 124 247 / 0.5);
+  --brand: #6b93ff;
+  --brand-hover: #85a7ff;
+  --brand-fg: #10131f;
+  --brand-soft: rgb(107 147 255 / 0.16);
+  --brand-soft-fg: #a8c2ff;
+  --brand-ring: rgb(107 147 255 / 0.5);
+  --brand-deep: #c3d4ff;
 
-  --accent: #2dd4bf;
-  --accent-soft: rgb(45 212 191 / 0.14);
-  --accent-fg: #5eead4;
+  --accent: #2fbfae;
+  --accent-soft: rgb(47 191 174 / 0.16);
+  --accent-fg: #6fded0;
 
-  --success: #4ade80;
-  --success-soft: rgb(74 222 128 / 0.14);
-  --warning: #fbbf24;
-  --warning-soft: rgb(251 191 36 / 0.14);
-  --danger: #f87171;
-  --danger-soft: rgb(248 113 113 / 0.14);
+  --mint: #2fbf8f;
+  --mint-soft: rgb(47 191 143 / 0.16);
+  --mint-fg: #6fddba;
 
-  --overlay: rgb(0 0 0 / 0.62);
+  --coral: #f0785f;
+  --coral-soft: rgb(240 120 95 / 0.16);
+  --coral-fg: #ffa48f;
 
-  --physics: #8b88ff;
-  --chemistry: #2dd4bf;
-  --mathematics: #fbbf24;
-  --english: #fb7185;
-  --computer: #38bdf8;
+  --amber: #e0a03a;
+  --amber-soft: rgb(224 160 58 / 0.16);
+  --amber-fg: #f0c377;
 
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --sky: #4aa3e8;
+  --sky-soft: rgb(74 163 232 / 0.16);
+  --sky-fg: #8ec6f5;
+
+  --success: #4cc98a;
+  --success-soft: rgb(76 201 138 / 0.16);
+  --warning: #e0a84a;
+  --warning-soft: rgb(224 168 74 / 0.16);
+  --danger: #f27a72;
+  --danger-soft: rgb(242 122 114 / 0.16);
+
+  --overlay: rgb(10 9 7 / 0.66);
+
+  --physics: #4aa3e8;
+  --physics-soft: rgb(74 163 232 / 0.16);
+  --physics-fg: #8ec6f5;
+
+  --chemistry: #2fbf8f;
+  --chemistry-soft: rgb(47 191 143 / 0.16);
+  --chemistry-fg: #6fddba;
+
+  --mathematics: #e0a03a;
+  --mathematics-soft: rgb(224 160 58 / 0.16);
+  --mathematics-fg: #f0c377;
+
+  --english: #f0785f;
+  --english-soft: rgb(240 120 95 / 0.16);
+  --english-fg: #ffa48f;
+
+  --computer: #8b89f5;
+  --computer-soft: rgb(139 137 245 / 0.16);
+  --computer-fg: #bfbeff;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-raised:
-    0 1px 2px rgb(0 0 0 / 0.5), 0 16px 40px -20px rgb(0 0 0 / 0.7);
+    0 2px 4px rgb(0 0 0 / 0.4), 0 12px 28px -12px rgb(0 0 0 / 0.6);
   --shadow-pop:
-    0 2px 6px rgb(0 0 0 / 0.55), 0 28px 56px -28px rgb(0 0 0 / 0.8);
-  --shadow-nav: 0 -1px 0 rgb(255 255 255 / 0.06);
+    0 4px 10px rgb(0 0 0 / 0.45), 0 28px 56px -22px rgb(0 0 0 / 0.7);
+  --shadow-hero:
+    0 8px 20px -8px rgb(0 0 0 / 0.5), 0 32px 64px -24px rgb(0 0 0 / 0.72);
+  --shadow-nav: 0 -1px 0 rgb(240 232 216 / 0.07);
+  --shadow-glow: 0 6px 20px -8px rgb(107 147 255 / 0.5);
 }
 
-/* --------------------------------- base ----------------------------------- */
+/* ========================================================================== */
+/* Base                                                                        */
+/* ========================================================================== */
 html {
   -webkit-text-size-adjust: 100%;
 }
@@ -189,7 +318,7 @@ body {
 :focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::selection {
@@ -221,16 +350,37 @@ body {
   background-clip: content-box;
 }
 
+/* ========================================================================== */
+/* Utilities                                                                   */
+/* ========================================================================== */
+
 /* Numeric, tabular alignment for stats and timers */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Handwriting-style display for formulae */
+/* Equations get a distinct, authoritative voice */
 .formula {
   font-family: var(--font-mono);
   font-feature-settings: 'tnum' 1;
   letter-spacing: -0.01em;
+}
+
+/* Editorial display type — hero headlines and page titles */
+.text-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+}
+
+/* Section eyebrow: small, tracked, uppercase — the editorial label */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint-fg);
 }
 
 /* Long academic titles must wrap gracefully on 360px screens */
@@ -259,6 +409,106 @@ body {
 /* Bottom navigation respects the Android gesture bar */
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* --------------------------------------------------------------------------
+   Paper texture — an extremely fine fractal noise so large flat areas read
+   as a surface rather than a void. Layered at ~3% so it never fights text.
+   -------------------------------------------------------------------------- */
+.paper-texture {
+  position: relative;
+}
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .paper-texture::before {
+  opacity: 0.05;
+}
+
+/* --------------------------------------------------------------------------
+   Gradient fields — the coloured depth behind hero areas.
+   Radial washes rather than hard gradients, so they read as light, not paint.
+   -------------------------------------------------------------------------- */
+.field-warm {
+  background:
+    radial-gradient(58% 46% at 12% 8%, rgb(35 80 230 / 0.1) 0%, transparent 62%),
+    radial-gradient(46% 40% at 92% 14%, rgb(18 166 120 / 0.1) 0%, transparent 60%),
+    radial-gradient(50% 44% at 74% 96%, rgb(224 138 22 / 0.09) 0%, transparent 62%);
+}
+.dark .field-warm {
+  background:
+    radial-gradient(58% 46% at 12% 8%, rgb(107 147 255 / 0.14) 0%, transparent 62%),
+    radial-gradient(46% 40% at 92% 14%, rgb(47 191 143 / 0.11) 0%, transparent 60%),
+    radial-gradient(50% 44% at 74% 96%, rgb(224 160 58 / 0.09) 0%, transparent 62%);
+}
+
+/* Subject-tinted fields for chapter headers and feature panels. */
+.field-physics {
+  background:
+    radial-gradient(60% 60% at 82% 10%, rgb(11 132 216 / 0.16) 0%, transparent 64%),
+    radial-gradient(48% 48% at 8% 92%, rgb(11 132 216 / 0.09) 0%, transparent 62%);
+}
+.field-chemistry {
+  background:
+    radial-gradient(60% 60% at 82% 10%, rgb(15 157 118 / 0.16) 0%, transparent 64%),
+    radial-gradient(48% 48% at 8% 92%, rgb(15 157 118 / 0.09) 0%, transparent 62%);
+}
+.field-mathematics {
+  background:
+    radial-gradient(60% 60% at 82% 10%, rgb(224 138 22 / 0.16) 0%, transparent 64%),
+    radial-gradient(48% 48% at 8% 92%, rgb(224 138 22 / 0.1) 0%, transparent 62%);
+}
+.field-english {
+  background:
+    radial-gradient(60% 60% at 82% 10%, rgb(226 96 74 / 0.16) 0%, transparent 64%),
+    radial-gradient(48% 48% at 8% 92%, rgb(226 96 74 / 0.09) 0%, transparent 62%);
+}
+.field-computer {
+  background:
+    radial-gradient(60% 60% at 82% 10%, rgb(74 72 216 / 0.16) 0%, transparent 64%),
+    radial-gradient(48% 48% at 8% 92%, rgb(74 72 216 / 0.1) 0%, transparent 62%);
+}
+
+/* --------------------------------------------------------------------------
+   Fine geometric overlays — decorative only, drawn as hairlines at very low
+   opacity so they add texture without ever competing with content.
+   -------------------------------------------------------------------------- */
+.pattern-grid {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.pattern-dots {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.pattern-rings {
+  background-image: repeating-radial-gradient(
+    circle at 82% 12%,
+    transparent 0,
+    transparent 26px,
+    var(--border) 27px,
+    transparent 28px
+  );
+}
+
+/* A hairline that reads as an editorial rule rather than a component border */
+.rule-top {
+  border-top: 1px solid var(--border);
+}
+
+/* Hairline icon default — keeps Lucide icons legible at small sizes */
+.icon-line {
+  stroke-width: 1.9;
 }
 
 @media (prefers-reduced-motion: reduce) {

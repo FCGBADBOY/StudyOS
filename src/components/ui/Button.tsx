@@ -7,15 +7,20 @@ export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'dan
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<ButtonVariant, string> = {
+  /* Primary reads as a solid object: a lit top edge and a wide, tinted bloom
+     rather than a drop shadow. */
   primary:
-    'bg-brand text-brand-fg shadow-card hover:bg-brand-hover active:bg-brand-hover disabled:bg-brand/50',
+    'bg-brand text-brand-fg shadow-[0_1px_2px_rgba(64,52,34,0.12),0_10px_22px_-12px_var(--brand-ring),inset_0_1px_0_rgba(255,255,255,0.24)] hover:bg-brand-hover active:bg-brand-hover disabled:bg-brand/45 disabled:shadow-none',
+  /* No hairline by default — separation comes from tone and space. */
   secondary:
-    'bg-surface-muted text-foreground border border-border hover:bg-surface-sunken active:bg-surface-sunken',
+    'bg-surface-muted text-foreground hover:bg-surface-sunken active:bg-surface-sunken',
   outline:
-    'bg-transparent text-foreground border border-border-strong hover:bg-surface-muted active:bg-surface-muted',
-  ghost: 'bg-transparent text-muted hover:text-foreground hover:bg-surface-muted active:bg-surface-muted',
-  danger: 'bg-danger text-white hover:opacity-90',
-  soft: 'bg-brand-soft text-brand-soft-fg hover:brightness-[0.98]',
+    'bg-surface/70 text-foreground border border-border-strong hover:bg-surface-muted active:bg-surface-muted',
+  ghost:
+    'bg-transparent text-muted hover:text-foreground hover:bg-surface-muted active:bg-surface-muted',
+  danger:
+    'bg-danger text-white shadow-[0_1px_2px_rgba(64,52,34,0.10),0_10px_22px_-12px_var(--danger)] hover:opacity-90 active:opacity-90',
+  soft: 'bg-brand-soft text-brand-soft-fg shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] hover:brightness-[0.98] dark:shadow-none',
 }
 
 const SIZES: Record<ButtonSize, string> = {

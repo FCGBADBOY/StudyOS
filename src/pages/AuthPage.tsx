@@ -1,12 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, GraduationCap, Loader2, Lock, Mail, UserRound } from 'lucide-react'
-import { Button, Card, Input, SectionHeader } from '@/components/ui'
+import { BackgroundArt, Badge, Button, Card, Illustration, Input, SectionHeader } from '@/components/ui'
+import { Logo } from '@/components/LogoMark'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/context/AppProvider'
 import { rememberNext, takeNext } from '@/services/auth.service'
 import { getProfileRow } from '@/services/profile.service'
 import { readLocal } from '@/utils/storage'
+
+/** Focus halo drawn on the field itself, never around the whole label group. */
+const FIELD_FOCUS =
+  '[&_div:focus-within]:ring-2 [&_div:focus-within]:ring-brand-ring [&_div:focus-within]:ring-inset'
 
 /** Multi-colour Google mark (no icon library ships the brand logo). */
 function GoogleIcon() {
@@ -40,6 +45,9 @@ type Mode = 'signin' | 'signup'
  * Google OAuth and email+password both go through Supabase Auth. After a
  * successful sign-in the student lands on the page they originally asked for,
  * or in onboarding when their profile has no board/class yet.
+ *
+ * Desktop splits into two columns — the form on the warm paper side, the brand
+ * illustration on the other. Phones get a single comfortable column.
  */
 export default function AuthPage() {
   const navigate = useNavigate()
@@ -121,92 +129,137 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-md pb-24">
-      <SectionHeader
-        title={mode === 'signin' ? 'Welcome back' : 'Create your account'}
-        subtitle={
-          mode === 'signin'
-            ? 'Sign in to sync your progress, MistakeBook and planner.'
-            : 'One account for notes, PYQs, progress and your planner.'
-        }
-      />
+    <div className="mx-auto w-full max-w-5xl pb-8">
+      <div className="relative isolate overflow-hidden rounded-hero bg-cream shadow-hero lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+        {/* ------------------------------------------------------ form side */}
+        <div className="relative isolate p-5 sm:p-8 lg:bg-surface lg:p-10">
+          <BackgroundArt theme="brand" intensity="faint" className="-z-10" />
 
-      <Card padded className="space-y-4">
-        <Button variant="outline" fullWidth size="lg" icon={<GoogleIcon />} onClick={handleGoogle} loading={busy}>
-          Continue with Google
-        </Button>
+          <SectionHeader
+            eyebrow="StudyOS"
+            title={mode === 'signin' ? 'Welcome back' : 'Create your account'}
+            subtitle={
+              mode === 'signin'
+                ? 'Sign in to sync your progress, MistakeBook and planner.'
+                : 'One account for notes, PYQs, progress and your planner.'
+            }
+          />
 
-        <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-faint">
-          <span className="h-px flex-1 bg-border" />
-          or use email
-          <span className="h-px flex-1 bg-border" />
+          <Card padded elevation="raised" className="mt-4 space-y-4 sm:mt-5">
+            <Button variant="outline" fullWidth size="lg" icon={<GoogleIcon />} onClick={handleGoogle} loading={busy}>
+              Continue with Google
+            </Button>
+
+            <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-faint">
+              <span className="h-px flex-1 bg-border" />
+              or use email
+              <span className="h-px flex-1 bg-border" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {mode === 'signup' && (
+                <Input
+                  label="Full name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Sumit Verma"
+                  autoComplete="name"
+                  icon={<UserRound />}
+                  maxLength={48}
+                  className={FIELD_FOCUS}
+                />
+              )}
+              <Input
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
+                icon={<Mail />}
+                required
+                className={FIELD_FOCUS}
+              />
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="At least 6 characters"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                icon={<Lock />}
+                hint={mode === 'signup' ? 'Stored securely by Supabase Auth — we never keep your password.' : undefined}
+                required
+                className={FIELD_FOCUS}
+              />
+
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-control bg-danger-soft px-3 py-2.5 text-[13px] font-medium text-danger"
+                >
+                  {error}
+                </p>
+              )}
+
+              <Button type="submit" fullWidth size="lg" loading={busy} iconRight={<ArrowRight />}>
+                {mode === 'signin' ? 'Sign in' : 'Create account'}
+              </Button>
+            </form>
+
+            <p className="text-center text-[13px] text-muted">
+              {mode === 'signin' ? 'New to StudyOS?' : 'Already have an account?'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode(mode === 'signin' ? 'signup' : 'signin')
+                  setError(null)
+                }}
+                className="rounded-control px-1 font-semibold text-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand-ring"
+              >
+                {mode === 'signin' ? 'Create an account' : 'Sign in'}
+              </button>
+            </p>
+          </Card>
+
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] font-medium leading-relaxed text-muted">
+            <GraduationCap aria-hidden className="h-3.5 w-3.5 shrink-0" />
+            Your data is protected by row-level security — only you can read it.
+            {busy && <Loader2 aria-hidden className="h-3 w-3 animate-spin" />}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {mode === 'signup' && (
-            <Input
-              label="Full name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Sumit Verma"
-              autoComplete="name"
-              icon={<UserRound />}
-              maxLength={48}
-            />
-          )}
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-            icon={<Mail />}
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 6 characters"
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            icon={<Lock />}
-            hint={mode === 'signup' ? 'Stored securely by Supabase Auth — we never keep your password.' : undefined}
-            required
+        {/* -------------------------------------------------- brand side */}
+        <div className="relative isolate hidden overflow-hidden lg:block">
+          <BackgroundArt theme="brand" geometry intensity="subtle" />
+          <span
+            aria-hidden
+            className="pattern-dots pointer-events-none absolute inset-y-0 right-0 w-1/3 opacity-[0.35]"
           />
 
-          {error && (
-            <p role="alert" className="rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-[13px] font-medium text-danger">
-              {error}
+          <div className="relative flex h-full flex-col justify-center gap-6 px-8 py-10 xl:px-10">
+            <Logo size={44} />
+
+            <div className="overflow-hidden rounded-card bg-surface p-5 shadow-card">
+              <Illustration name="graduation" theme="brand" decorative className="w-full" />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="brand" dot uppercase>
+                Built for CBSE · ICSE · State boards
+              </Badge>
+              <Badge variant="neutral" icon={<GraduationCap />}>
+                Class 12
+              </Badge>
+            </div>
+
+            <p className="max-w-sm text-[13px] leading-relaxed text-muted">
+              One account for notes, PYQs, progress and your planner — your data is protected by
+              row-level security, so only you can read it.
             </p>
-          )}
-
-          <Button type="submit" fullWidth size="lg" loading={busy} iconRight={<ArrowRight />}>
-            {mode === 'signin' ? 'Sign in' : 'Create account'}
-          </Button>
-        </form>
-
-        <p className="text-center text-[13px] text-muted">
-          {mode === 'signin' ? 'New to StudyOS?' : 'Already have an account?'}{' '}
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === 'signin' ? 'signup' : 'signin')
-              setError(null)
-            }}
-            className="font-semibold text-brand hover:underline"
-          >
-            {mode === 'signin' ? 'Create an account' : 'Sign in'}
-          </button>
-        </p>
-      </Card>
-
-      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[12px] text-faint">
-        <GraduationCap aria-hidden className="h-3.5 w-3.5" />
-        Your data is protected by row-level security — only you can read it.
-        {busy && <Loader2 aria-hidden className="h-3 w-3 animate-spin" />}
-      </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

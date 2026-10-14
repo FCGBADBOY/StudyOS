@@ -160,7 +160,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     root.classList.toggle('dark', resolvedTheme === 'dark')
     root.style.colorScheme = resolvedTheme
     const meta = document.querySelector('meta[name="theme-color"]')
-    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#0a0a0c' : '#f6f6f4')
+    if (meta) meta.setAttribute('content', resolvedTheme === 'dark' ? '#1a1917' : '#f7f5f0')
   }, [resolvedTheme])
 
   /* --- actions --- */

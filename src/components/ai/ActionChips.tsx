@@ -8,9 +8,10 @@
  *
  * Chips emit either a follow-up message or a typed action.
  */
-import { useState } from 'react'
+import { useRef, useState, useLayoutEffect } from 'react'
 import { Check, Copy, RotateCcw, Save } from 'lucide-react'
 import { Chip } from '@/components/ui'
+import { buttonPress, cardHover } from '@/animations'
 import type { AIAction, ResponseMeta } from '@/ai/types'
 
 export interface AnswerAction {
@@ -65,11 +66,34 @@ export function ActionChips({
 }) {
   const [copied, setCopied] = useState(false)
   const [saved, setSaved] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
 
   const responseActions = meta ? hintActions(meta) : []
   const standard = meta && meta.type === 'hint' ? [] : STANDARD_ACTIONS
   const suggestions = meta?.relatedQuestions ?? []
   const showSave = Boolean(onSave)
+
+  /* Re-attach the tactile handlers whenever the chip set changes shape. */
+  const signature = [
+    suggestions.length,
+    responseActions.map((entry) => entry.id).join(','),
+    showSave ? 'save' : '',
+    onRegenerate ? 'regen' : '',
+  ].join('|')
+
+  useLayoutEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const cleanups = Array.from(root.querySelectorAll('button')).map((chip) => {
+      const press = buttonPress(chip)
+      const hover = cardHover(chip)
+      return () => {
+        press()
+        hover()
+      }
+    })
+    return () => cleanups.forEach((fn) => fn())
+  }, [signature])
 
   const copy = async () => {
     try {
@@ -91,12 +115,16 @@ export function ActionChips({
   if (!hasAnything) return null
 
   return (
-    <div className="mt-3 space-y-2 pl-2">
+    <div ref={rootRef} className="mt-3 space-y-2">
       {suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {suggestions.map((question) => (
-            <Chip key={question} onClick={() => onFollowUp?.(question)} className="min-h-10 text-left text-[12px]">
-              {question}
+            <Chip
+              key={question}
+              onClick={() => onFollowUp?.(question)}
+              className="min-h-11 max-w-full text-left text-[12.5px] shadow-card"
+            >
+              <span className="min-w-0 break-words">{question}</span>
             </Chip>
           ))}
         </div>
@@ -107,26 +135,30 @@ export function ActionChips({
           <Chip
             key={action.id}
             onClick={() => onAction(action.id, ACTION_MESSAGES[action.id])}
-            className="min-h-10 bg-surface text-[12px]"
+            className="min-h-11 text-[12px]"
           >
             {action.label}
           </Chip>
         ))}
 
-        <Chip onClick={() => void copy()} className="min-h-10 bg-surface text-[12px]" ariaLabel="Copy answer">
-          {copied ? <Check aria-hidden className="h-3.5 w-3.5 text-success" /> : <Copy aria-hidden className="h-3.5 w-3.5" />}
+        <Chip onClick={() => void copy()} className="min-h-11 text-[12px]" ariaLabel="Copy answer">
+          {copied ? (
+            <Check aria-hidden className="h-3.5 w-3.5 text-success" />
+          ) : (
+            <Copy aria-hidden className="h-3.5 w-3.5" />
+          )}
           {copied ? 'Copied' : 'Copy'}
         </Chip>
 
         {onRegenerate && (
-          <Chip onClick={onRegenerate} className="min-h-10 bg-surface text-[12px]" ariaLabel="Regenerate answer">
+          <Chip onClick={onRegenerate} className="min-h-11 text-[12px]" ariaLabel="Regenerate answer">
             <RotateCcw aria-hidden className="h-3.5 w-3.5" />
             Regenerate
           </Chip>
         )}
 
         {showSave && (
-          <Chip onClick={save} className="min-h-10 bg-surface text-[12px]" ariaLabel="Save to MistakeBook">
+          <Chip onClick={save} className="min-h-11 text-[12px]" ariaLabel="Save to MistakeBook">
             <Save aria-hidden className="h-3.5 w-3.5" />
             {saved ? 'Saved' : 'Save to MistakeBook'}
           </Chip>

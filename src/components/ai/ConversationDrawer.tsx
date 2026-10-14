@@ -5,10 +5,17 @@
  * Data comes from `ai_conversations` under RLS — a student only ever sees
  * their own threads, and the server keeps a rolling summary of older turns so
  * long threads stay inside the context window.
+ *
+ * Visual treatment: each thread is a designed row card — a themed icon tile,
+ * the title with its metadata, and quiet rename/delete affordances on the
+ * trailing edge. The active thread is tinted so the student always knows
+ * which conversation they are inside.
  */
-import { useEffect, useMemo, useState } from 'react'
-import { MessageSquarePlus, Pencil, Search, Trash2 } from 'lucide-react'
-import { BottomSheet, Button, Chip, EmptyState, IconButton, Input, LoadingState } from '@/components/ui'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MessageSquare, MessageSquarePlus, Pencil, Search, ShieldCheck, Trash2 } from 'lucide-react'
+import { BottomSheet, Button, Chip, EmptyState, IconTile, IconButton, Input, LoadingState } from '@/components/ui'
+import { cardHover } from '@/animations'
+import { cn } from '@/utils/cn'
 import type { ConversationSummary } from '@/ai/types'
 
 function relativeTime(iso: string): string {
@@ -48,6 +55,7 @@ export function ConversationDrawer({
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
+  const listRef = useRef<HTMLUListElement>(null)
 
   useEffect(() => {
     if (!open) {
@@ -61,6 +69,16 @@ export function ConversationDrawer({
     if (!term) return conversations
     return conversations.filter((entry) => entry.title.toLowerCase().includes(term))
   }, [conversations, query])
+
+  /* Desktop pointers get a gentle lift on each thread row. */
+  useEffect(() => {
+    const root = listRef.current
+    if (!root) return
+    const cleanups = Array.from(root.querySelectorAll<HTMLElement>('[data-thread]')).map((row) =>
+      cardHover(row),
+    )
+    return () => cleanups.forEach((fn) => fn())
+  }, [filtered.length, open])
 
   const commitRename = (conversation: ConversationSummary) => {
     const title = draftTitle.trim()
@@ -105,9 +123,12 @@ export function ConversationDrawer({
                 ? 'Try a different word from the title.'
                 : 'Ask the tutor anything — your threads will appear here.'
             }
+            illustration="notebook"
+            theme="ai"
+            compact
           />
         ) : (
-          <ul role="list" className="space-y-2">
+          <ul ref={listRef} role="list" className="space-y-2">
             {filtered.map((conversation) => {
               const isActive = conversation.id === activeId
               const isEditing = editingId === conversation.id
@@ -115,14 +136,16 @@ export function ConversationDrawer({
               return (
                 <li
                   key={conversation.id}
-                  className={
+                  data-thread={isActive ? undefined : ''}
+                  className={cn(
+                    'rounded-tile transition-shadow duration-150',
                     isActive
-                      ? 'rounded-tile border border-brand bg-brand-soft'
-                      : 'rounded-tile border border-border bg-surface'
-                  }
+                      ? 'bg-brand-soft ring-1 ring-inset ring-brand-ring'
+                      : 'bg-surface shadow-card hover:shadow-raised',
+                  )}
                 >
                   {isEditing ? (
-                    <div className="flex items-center gap-2 p-2">
+                    <div className="flex items-center gap-2 p-2.5">
                       <Input
                         value={draftTitle}
                         autoFocus
@@ -139,19 +162,27 @@ export function ConversationDrawer({
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 p-2">
+                    <div className="flex items-center gap-1.5 p-2.5">
                       <button
                         type="button"
                         onClick={() => onOpen(conversation)}
-                        className="min-w-0 flex-1 text-left"
+                        className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-tile text-left outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
                       >
-                        <span className="block truncate text-[13px] font-medium text-foreground">
-                          {conversation.title}
-                        </span>
-                        <span className="block text-[11px] text-faint">
-                          {relativeTime(conversation.updatedAt)}
-                          {conversation.messageCount ? ` · ${conversation.messageCount} messages` : ''}
-                          {conversation.mode ? ` · ${conversation.mode}` : ''}
+                        <IconTile
+                          icon={<MessageSquare />}
+                          theme={isActive ? 'ai' : 'neutral'}
+                          variant={isActive ? 'soft' : 'outlined'}
+                          size="sm"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="clamp-2 block text-[13px] font-semibold leading-snug text-foreground">
+                            {conversation.title}
+                          </span>
+                          <span className="mt-0.5 block truncate text-[11px] text-faint">
+                            {relativeTime(conversation.updatedAt)}
+                            {conversation.messageCount ? ` · ${conversation.messageCount} messages` : ''}
+                            {conversation.mode ? ` · ${conversation.mode}` : ''}
+                          </span>
                         </span>
                       </button>
 
@@ -159,6 +190,7 @@ export function ConversationDrawer({
                         label="Rename chat"
                         size="sm"
                         variant="ghost"
+                        className="min-h-11 min-w-11"
                         onClick={() => {
                           setEditingId(conversation.id)
                           setDraftTitle(conversation.title)
@@ -170,6 +202,7 @@ export function ConversationDrawer({
                         label="Delete chat"
                         size="sm"
                         variant="ghost"
+                        className="min-h-11 min-w-11"
                         onClick={() => onDelete(conversation)}
                       >
                         <Trash2 />
@@ -183,7 +216,11 @@ export function ConversationDrawer({
         )}
 
         {filtered.length > 0 && (
-          <Chip className="w-full justify-center text-[11px]" ariaLabel="Privacy note">
+          <Chip
+            icon={<ShieldCheck />}
+            className="w-full justify-center text-[11px]"
+            ariaLabel="Privacy note"
+          >
             Only you can see these chats — RLS keeps every thread owner-only.
           </Chip>
         )}

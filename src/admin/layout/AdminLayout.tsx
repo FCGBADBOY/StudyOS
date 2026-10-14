@@ -242,7 +242,9 @@ function RailContent({ groups, onNavigate, loading }: RailContentProps) {
                       <NavLink
                         to={item.href}
                         onClick={onNavigate}
-                        end={!item.match}
+                        /* A custom `match` is authoritative, so let it — not
+                           NavLink's prefix test — decide the active state. */
+                        end
                         className={({ isActive }) =>
                           [
                             'flex items-center gap-2.5 rounded-control px-2.5 py-2 text-sm',

@@ -1,41 +1,44 @@
 import type { SubjectId } from '@/types'
+import { subjectTheme, themeColors, themeRing, type ThemeKey } from '@/config/visual'
 
 /**
- * Per-subject accent utilities. Colours come from the design tokens so they
- * stay consistent (and theme-aware) across every card in the app.
+ * Per-subject accent utilities.
+ *
+ * The colour values live in `src/styles/index.css` and are resolved through the
+ * shared theme vocabulary (`@/config/visual`), so a subject looks identical
+ * here, in a chapter card, in the planner timeline and in a progress ring.
  */
 export interface SubjectAccent {
+  /** Readable-on-tint foreground. Use for labels and initials. */
   text: string
+  /** Soft tinted ground. */
   soft: string
+  /** Saturated fill — dots, rails, chart bars. */
   solid: string
+  /** Ring colour at low emphasis. */
   ring: string
+  /** The semantic theme key, for passing to IconTile / Illustration / Badge. */
+  theme: ThemeKey
 }
 
-const ACCENTS: Record<SubjectId, SubjectAccent> = {
-  physics: { text: 'text-physics', soft: 'bg-physics/10', solid: 'bg-physics', ring: 'ring-physics/30' },
-  chemistry: {
-    text: 'text-chemistry',
-    soft: 'bg-chemistry/10',
-    solid: 'bg-chemistry',
-    ring: 'ring-chemistry/30',
-  },
-  mathematics: {
-    text: 'text-mathematics',
-    soft: 'bg-mathematics/10',
-    solid: 'bg-mathematics',
-    ring: 'ring-mathematics/30',
-  },
-  english: { text: 'text-english', soft: 'bg-english/10', solid: 'bg-english', ring: 'ring-english/30' },
-  'computer-science': {
-    text: 'text-computer',
-    soft: 'bg-computer/10',
-    solid: 'bg-computer',
-    ring: 'ring-computer/30',
-  },
-}
+const CACHE = new Map<string, SubjectAccent>()
 
 export function subjectAccent(id?: string): SubjectAccent {
-  return ACCENTS[(id ?? 'physics') as SubjectId] ?? ACCENTS.physics
+  const key = (id ?? 'physics').toLowerCase()
+  const cached = CACHE.get(key)
+  if (cached) return cached
+
+  const theme = subjectTheme(key)
+  const c = themeColors(theme)
+  const accent: SubjectAccent = {
+    text: c.onSoft,
+    soft: c.soft,
+    solid: c.solid,
+    ring: themeRing(theme),
+    theme,
+  }
+  CACHE.set(key, accent)
+  return accent
 }
 
 export function subjectInitial(id?: string): string {

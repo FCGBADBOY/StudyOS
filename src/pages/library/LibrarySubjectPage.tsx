@@ -1,26 +1,34 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ChevronRight, Search, Target, Timer, TrendingUp } from 'lucide-react'
+import { ArrowRight, BookOpen, ChevronRight, Search, Target, Timer, TrendingUp } from 'lucide-react'
 import { useBoards, useClasses, useSubject, useSubjectResources, useStagger } from '@/hooks'
 import { useApp } from '@/context/AppProvider'
 import { RESOURCE_TABS } from '@/data/resources'
 import { ChapterCard } from '@/components/ChapterCard'
 import { ResourceCard } from '@/components/ResourceCard'
 import {
+  BackgroundArt,
   Badge,
   Breadcrumb,
+  Button,
+  Card,
   EmptyState,
   ErrorState,
+  Input,
+  InsightCard,
+  LinkButton,
   PageHeader,
   ProgressBar,
   ProgressRing,
   Skeleton,
   SkeletonList,
+  StatCard,
   Tabs,
   TabPanel,
   type Crumb,
 } from '@/components/ui'
 import type { ResourceType } from '@/types'
+import { subjectTheme, themeColors } from '@/config/visual'
 import { formatDuration } from '@/utils/format'
 import { cn } from '@/utils/cn'
 
@@ -68,10 +76,10 @@ export default function LibrarySubjectPage() {
   const pageSkeleton = (
     <div role="status" aria-live="polite" className="space-y-3">
       <span className="sr-only">Loading subject…</span>
-      <Skeleton className="h-36 w-full" />
+      <Skeleton className="h-44 w-full rounded-hero" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-28" />
+          <Skeleton key={index} className="h-28 rounded-card" />
         ))}
       </div>
     </div>
@@ -79,13 +87,30 @@ export default function LibrarySubjectPage() {
 
   if (hierarchyLoading) return pageSkeleton
   if (hierarchyError)
-    return <ErrorState title="We could not load this subject" onRetry={refetchHierarchy} />
+    return (
+      <ErrorState
+        title="We could not load this subject"
+        illustration="notebook"
+        theme="library"
+        onRetry={refetchHierarchy}
+      />
+    )
   if (!boardData || !classData) return <Navigate to="/library" replace />
 
   if (subjectQuery.loading) return pageSkeleton
   if (subjectQuery.error)
-    return <ErrorState title="We could not load this subject" onRetry={subjectQuery.refetch} />
+    return (
+      <ErrorState
+        title="We could not load this subject"
+        illustration="notebook"
+        theme={subjectTheme(subjectId)}
+        onRetry={subjectQuery.refetch}
+      />
+    )
   if (!subject) return <Navigate to="/library" replace />
+
+  const theme = subjectTheme(subject.id)
+  const colors = themeColors(theme)
 
   const crumbs: Crumb[] = [
     { label: 'Library', to: '/library' },
@@ -107,58 +132,80 @@ export default function LibrarySubjectPage() {
     subject.chapters.find((chapter) => chapter.progress < 100) ?? subject.chapters[0]
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <PageHeader
-        breadcrumb={<Breadcrumb items={crumbs} />}
-        title={subject.name}
-        subtitle={subject.description}
-        back={`/library/${boardData.id}/${classData.id}`}
-        actions={
-          <div className="hidden shrink-0 items-center gap-3 sm:flex">
-            <ProgressRing value={subject.progress} size={72} stroke={7} label={`${subject.name} progress`} />
-          </div>
-        }
-      />
+    <div className="space-y-7 sm:space-y-9">
+      {/* ------------------------------------------------------------ */}
+      {/* Subject band — the hue of this page, set once at the top      */}
+      {/* ------------------------------------------------------------ */}
+      <section className="relative isolate overflow-hidden rounded-hero bg-cream shadow-card">
+        <span
+          aria-hidden
+          className={cn('pointer-events-none absolute inset-0 opacity-80', colors.field)}
+        />
+        <BackgroundArt theme={theme} intensity="subtle" variant="band" />
+
+        <div className="relative p-4 sm:p-6 lg:p-8">
+          <PageHeader
+            eyebrow={`${boardData.name} · ${classData.name}`}
+            breadcrumb={<Breadcrumb items={crumbs} />}
+            title={subject.name}
+            subtitle={subject.description}
+            back={`/library/${boardData.id}/${classData.id}`}
+            size="lg"
+            actions={
+              <div className="hidden shrink-0 items-center sm:flex">
+                <ProgressRing
+                  value={subject.progress}
+                  size={72}
+                  stroke={7}
+                  color={colors.accentVar}
+                  label={`${subject.name} progress`}
+                />
+              </div>
+            }
+          />
+        </div>
+      </section>
 
       {/* Meta strip */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-card border border-border bg-surface p-4 shadow-card">
-          <p className="text-[12.5px] text-muted">Chapters</p>
-          <p className="mt-1 text-xl font-bold tabular text-foreground">
-            {subject.completedChapters}
-            <span className="text-sm font-semibold text-faint">/{subject.totalChapters}</span>
-          </p>
-          <p className="mt-1 text-[12px] text-faint">completed</p>
-        </div>
-        <div className="rounded-card border border-border bg-surface p-4 shadow-card">
-          <p className="text-[12.5px] text-muted">Questions</p>
-          <p className="mt-1 text-xl font-bold tabular text-foreground">
-            {subject.questionCount.toLocaleString('en-IN')}
-          </p>
-          <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-faint">
-            <Target aria-hidden className="h-3.5 w-3.5" /> practice bank
-          </p>
-        </div>
-        <div className="rounded-card border border-border bg-surface p-4 shadow-card">
-          <p className="text-[12.5px] text-muted">Accuracy</p>
-          <p className="mt-1 text-xl font-bold tabular text-foreground">{subject.accuracy}%</p>
-          <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-success">
-            <TrendingUp aria-hidden className="h-3.5 w-3.5" /> last 7 days
-          </p>
-        </div>
-        <div className="rounded-card border border-border bg-surface p-4 shadow-card">
-          <p className="text-[12.5px] text-muted">Revision time</p>
-          <p className="mt-1 text-xl font-bold tabular text-foreground">
-            {formatDuration(subject.revisionMinutes)}
-          </p>
-          <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-faint">
-            <Timer aria-hidden className="h-3.5 w-3.5" /> full syllabus
-          </p>
-        </div>
+        <StatCard
+          label="Chapters"
+          value={
+            <>
+              {subject.completedChapters}
+              <span className="text-sm font-semibold text-faint">/{subject.totalChapters}</span>
+            </>
+          }
+          icon={<BookOpen />}
+          accent={theme}
+          trend="completed"
+        />
+        <StatCard
+          label="Questions"
+          value={subject.questionCount.toLocaleString('en-IN')}
+          icon={<Target />}
+          accent={theme}
+          trend="practice bank"
+        />
+        <StatCard
+          label="Accuracy"
+          value={`${subject.accuracy}%`}
+          icon={<TrendingUp />}
+          accent="success"
+          trend="last 7 days"
+          trendTone="positive"
+        />
+        <StatCard
+          label="Revision time"
+          value={formatDuration(subject.revisionMinutes)}
+          icon={<Timer />}
+          accent={theme}
+          trend="full syllabus"
+        />
       </div>
 
       {/* Progress */}
-      <div className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-5">
+      <Card padded tone="cream">
         <ProgressBar
           value={subject.progress}
           label="Syllabus progress"
@@ -174,7 +221,7 @@ export default function LibrarySubjectPage() {
           Next milestone:{' '}
           {subject.progress >= 70 ? 'complete the PYQ bank' : 'finish the first three chapters'}
         </p>
-      </div>
+      </Card>
 
       {/* Tabs */}
       <div>
@@ -192,18 +239,15 @@ export default function LibrarySubjectPage() {
                 <label htmlFor="chapter-filter" className="sr-only">
                   Filter chapters
                 </label>
-                <div className="flex h-11 items-center gap-2 rounded-control border border-border bg-surface px-3.5 transition-colors focus-within:border-brand">
-                  <Search aria-hidden className="h-4 w-4 shrink-0 text-faint" />
-                  <input
-                    id="chapter-filter"
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Filter chapters or topics…"
-                    autoComplete="off"
-                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-faint"
-                  />
-                </div>
+                <Input
+                  id="chapter-filter"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Filter chapters or topics…"
+                  autoComplete="off"
+                  icon={<Search />}
+                />
               </div>
 
               {chapters.length ? (
@@ -221,27 +265,32 @@ export default function LibrarySubjectPage() {
                 <EmptyState
                   title={`No chapters match “${query}”`}
                   description="Try a topic name instead — every chapter is indexed by its key concepts."
+                  illustration="empty"
+                  theme={theme}
                   action={
-                    <button
-                      type="button"
-                      onClick={() => setQuery('')}
-                      className="rounded-control bg-brand px-4 py-2 text-sm font-semibold text-brand-fg"
-                    >
+                    <Button size="md" onClick={() => setQuery('')}>
                       Clear filter
-                    </button>
+                    </Button>
                   }
                 />
               ) : (
                 <EmptyState
                   title="No chapters yet"
                   description="Chapters for this subject are still being mapped — check back soon."
+                  illustration="notebook"
+                  theme={theme}
                 />
               )}
             </>
           ) : resourcesQuery.loading ? (
             <SkeletonList count={3} label="Loading resources" />
           ) : resourcesQuery.error ? (
-            <ErrorState title="We could not load the resources" onRetry={resourcesQuery.refetch} />
+            <ErrorState
+              title="We could not load the resources"
+              illustration="paper"
+              theme={theme}
+              onRetry={resourcesQuery.refetch}
+            />
           ) : (
             <div ref={listRef} className="grid gap-3 sm:grid-cols-2">
               {visibleResources.map((resource) => (
@@ -262,11 +311,13 @@ export default function LibrarySubjectPage() {
                   <EmptyState
                     title="Nothing filed here yet"
                     description="This resource type is generated per chapter — open one below."
+                    illustration="paper"
+                    theme={theme}
                     action={
                       firstChapter ? (
                         <Link
                           to={`/library/${boardData.id}/${classData.id}/${subject.id}/${firstChapter.slug}`}
-                          className="rounded-control bg-brand px-4 py-2 text-sm font-semibold text-brand-fg"
+                          className="inline-flex h-11 items-center rounded-control bg-brand px-4 text-sm font-semibold text-brand-fg outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
                         >
                           Open first chapter
                         </Link>
@@ -280,59 +331,66 @@ export default function LibrarySubjectPage() {
         </TabPanel>
       </div>
 
-      {/* Teacher note */}
-      <div className={cn('rounded-card border border-border bg-surface-muted p-4 sm:p-5')}>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="brand">Teacher’s note</Badge>
-          {subject.teacher && <Badge variant="neutral">{subject.teacher}</Badge>}
-        </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          {subject.id === 'mathematics'
-            ? 'Prioritise Calculus — it carries ~44% of the paper. Solve PYQs topic-wise before attempting full papers.'
-            : subject.id === 'physics'
-              ? 'Numericals from Current Electricity and EMI repeat every year. Keep a formula sheet open while practising.'
-              : subject.id === 'chemistry'
-                ? 'Organic named reactions are the highest-yield revision target. Use Reaction Lab to drill mechanisms.'
-                : subject.id === 'english'
-                  ? 'Practise one extract question daily — the comprehension section is where marks are lost.'
-                  : 'Code by hand before you run it. Boards award marks for trace tables and correct syntax.'}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Link
-            to="/formula-flow"
-            className="rounded-control border border-border bg-surface px-3 py-2 text-[13px] font-semibold text-foreground transition-colors hover:border-border-strong"
-          >
-            Formula Flow
-          </Link>
-          <Link
-            to="/pyq"
-            className="rounded-control border border-border bg-surface px-3 py-2 text-[13px] font-semibold text-foreground transition-colors hover:border-border-strong"
-          >
-            PYQ bank
-          </Link>
-          <button
-            type="button"
-            onClick={() => toast({ title: 'Added to planner', description: `${subject.name} revision block scheduled.` })}
-            className="rounded-control bg-brand px-3 py-2 text-[13px] font-semibold text-brand-fg"
-          >
-            Add to planner
-          </button>
-        </div>
-      </div>
+      {/* Teacher note — an explainable tip, so it gets the insight treatment */}
+      <InsightCard
+        tone={theme}
+        marker={<BookOpen />}
+        title="Teacher’s note"
+        body={
+          <>
+            {subject.teacher && <Badge variant="neutral">{subject.teacher}</Badge>}
+            <span className="mt-1.5 block text-sm leading-relaxed text-muted">
+              {subject.id === 'mathematics'
+                ? 'Prioritise Calculus — it carries ~44% of the paper. Solve PYQs topic-wise before attempting full papers.'
+                : subject.id === 'physics'
+                  ? 'Numericals from Current Electricity and EMI repeat every year. Keep a formula sheet open while practising.'
+                  : subject.id === 'chemistry'
+                    ? 'Organic named reactions are the highest-yield revision target. Use Reaction Lab to drill mechanisms.'
+                    : subject.id === 'english'
+                      ? 'Practise one extract question daily — the comprehension section is where marks are lost.'
+                      : 'Code by hand before you run it. Boards award marks for trace tables and correct syntax.'}
+            </span>
+          </>
+        }
+        detail={
+          <span className="flex flex-wrap items-center gap-2">
+            <LinkButton to="/formula-flow" variant="outline" size="md">
+              Formula Flow
+            </LinkButton>
+            <LinkButton to="/pyq" variant="outline" size="md">
+              PYQ bank
+            </LinkButton>
+            <Button
+              size="md"
+              onClick={() =>
+                toast({ title: 'Added to planner', description: `${subject.name} revision block scheduled.` })
+              }
+            >
+              Add to planner
+            </Button>
+          </span>
+        }
+      />
 
       {/* Next chapter CTA */}
       {nextChapter && (
         <Link
           to={`/library/${boardData.id}/${classData.id}/${subject.id}/${nextChapter.slug}`}
-          className="flex items-center justify-between gap-3 rounded-card border border-brand/40 bg-brand-soft p-4 outline-none transition-colors hover:brightness-[0.98] focus-visible:ring-2 focus-visible:ring-brand-ring"
+          className="group relative isolate flex items-center justify-between gap-3 overflow-hidden rounded-card bg-brand-soft p-4 shadow-card outline-none transition-shadow duration-150 hover:shadow-raised focus-visible:ring-2 focus-visible:ring-brand-ring sm:p-5"
         >
-          <span className="min-w-0">
-            <span className="block text-[13px] font-medium text-brand-soft-fg">Continue where you stopped</span>
-            <span className="block truncate text-[15px] font-semibold text-foreground">
+          <BackgroundArt theme="brand" intensity="faint" variant="corner" />
+          <span className="relative min-w-0">
+            <span className="block text-[13px] font-medium text-brand-soft-fg">
+              Continue where you stopped
+            </span>
+            <span className="mt-0.5 block truncate text-[15px] font-semibold text-foreground">
               {nextChapter.title}
             </span>
           </span>
-          <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-brand" />
+          <ArrowRight
+            aria-hidden
+            className="relative h-5 w-5 shrink-0 text-brand transition-transform duration-150 group-hover:translate-x-1"
+          />
         </Link>
       )}
     </div>

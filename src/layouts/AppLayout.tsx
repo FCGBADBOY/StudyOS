@@ -34,19 +34,27 @@ function AnimatedOutlet() {
  */
 export function AppLayout() {
   return (
-    <div className="min-h-dvh bg-background">
-      <Sidebar />
-      <div className="md:pl-[248px]">
-        <TopBar />
-        <main
-          id="main"
-          className="mx-auto w-full max-w-6xl px-4 pt-5 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:px-6 sm:pt-7 md:pb-14"
-        >
-          <AnimatedOutlet />
-        </main>
+    <div className="relative min-h-dvh bg-background paper-texture">
+      {/* One ambient field for the whole shell — keeps long scroll runs from
+          reading as flat paper without ever competing with content. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-x-0 top-0 z-0 h-[420px] bg-[radial-gradient(70%_100%_at_15%_0%,rgb(35_80_230/0.09),transparent_60%),radial-gradient(50%_90%_at_90%_0%,rgb(18_166_120/0.08),transparent_62%)] dark:bg-[radial-gradient(70%_100%_at_15%_0%,rgb(107_147_255/0.14),transparent_60%),radial-gradient(50%_90%_at_90%_0%,rgb(47_191_143/0.1),transparent_62%)]"
+      />
+      <div className="relative z-10">
+        <Sidebar />
+        <div className="md:pl-[252px]">
+          <TopBar />
+          <main
+            id="main"
+            className="mx-auto w-full max-w-6xl px-4 pt-6 pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] sm:px-6 sm:pt-8 md:pb-16"
+          >
+            <AnimatedOutlet />
+          </main>
+        </div>
+        <BottomNavigation />
+        <GlobalSearch />
       </div>
-      <BottomNavigation />
-      <GlobalSearch />
     </div>
   )
 }

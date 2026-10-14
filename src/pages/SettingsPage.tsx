@@ -1,11 +1,30 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Database, FileText, RotateCcw, Send, Trash } from 'lucide-react'
+import {
+  Bell,
+  Bookmark,
+  CalendarDays,
+  Clock,
+  Database,
+  FileText,
+  Flame,
+  GraduationCap,
+  Info,
+  Layers,
+  Palette,
+  RotateCcw,
+  Search,
+  Send,
+  Sparkles,
+  Target,
+  Trash,
+} from 'lucide-react'
 import {
   Badge,
   Button,
   Card,
   EmptyState,
   ErrorState,
+  IconTile,
   LinkButton,
   Modal,
   PageHeader,
@@ -18,6 +37,7 @@ import {
 } from '@/components/ui'
 import { useBoards, useClasses, useProfile, useStagger, useStreams } from '@/hooks'
 import { useApp, useTheme, useToast } from '@/context/AppProvider'
+import type { ThemeKey } from '@/config/visual'
 import { formatDuration } from '@/utils/format'
 import { cn } from '@/utils/cn'
 import type { Board, ClassOption, OnboardingAnswers, ProfileUser, StreamOption, ThemePreference } from '@/types'
@@ -83,9 +103,29 @@ function reminderOptions(current: string): { id: string; label: string }[] {
 
 /* --------------------------------- rows ----------------------------------- */
 
-function RowShell({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * One preference row: a designed icon tile, then the label/description and the
+ * control. Separation comes from a hairline divider and the card tone — the
+ * row itself never draws a box.
+ */
+function RowShell({
+  icon,
+  theme = 'settings',
+  children,
+  className,
+}: {
+  icon?: ReactNode
+  theme?: ThemeKey
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <div className={cn('border-t border-border px-4 py-4 first:border-t-0 sm:px-5', className)}>{children}</div>
+    <div className={cn('border-t border-border px-4 py-4 first:border-t-0 sm:px-5', className)}>
+      <div className="flex items-start gap-3 sm:gap-4">
+        {icon && <IconTile icon={icon} theme={theme} size="sm" className="mt-0.5" />}
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </div>
   )
 }
 
@@ -93,16 +133,20 @@ function RowShell({ children, className }: { children: ReactNode; className?: st
 function SettingRow({
   title,
   description,
+  icon,
+  theme,
   children,
   controlClassName,
 }: {
   title: string
   description?: string
+  icon?: ReactNode
+  theme?: ThemeKey
   children: ReactNode
   controlClassName?: string
 }) {
   return (
-    <RowShell>
+    <RowShell icon={icon} theme={theme}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">{title}</p>
@@ -215,8 +259,9 @@ export default function SettingsPage() {
           : null
 
   return (
-    <div ref={pageRef} className="space-y-6 sm:space-y-8">
+    <div ref={pageRef} className="space-y-7 sm:space-y-9">
       <PageHeader
+        eyebrow="Preferences"
         title="Settings"
         subtitle="Appearance, study preferences, stored data and app info"
         actions={
@@ -230,6 +275,7 @@ export default function SettingsPage() {
       <section aria-labelledby="settings-appearance">
         <SectionHeader
           id="settings-appearance"
+          eyebrow="Look & feel"
           title="Appearance"
           subtitle="Theme and motion across the whole app"
         />
@@ -237,6 +283,8 @@ export default function SettingsPage() {
           <SettingRow
             title="Theme"
             description="System follows your device setting live."
+            icon={<Palette />}
+            theme="settings"
             controlClassName="sm:w-72"
           >
             <SegmentedControl<ThemePreference>
@@ -247,7 +295,7 @@ export default function SettingsPage() {
             />
           </SettingRow>
 
-          <RowShell>
+          <RowShell icon={<Sparkles />} theme="ai">
             <Switch
               checked={preferences.reduceMotion}
               onChange={(checked) => {
@@ -271,11 +319,12 @@ export default function SettingsPage() {
       <section aria-labelledby="settings-study">
         <SectionHeader
           id="settings-study"
+          eyebrow="Your routine"
           title="Study"
           subtitle="Goal, curriculum and what we notify you about"
         />
         <Card padded={false}>
-          <RowShell>
+          <RowShell icon={<Target />} theme="planner">
             <Slider
               label="Daily study goal"
               min={30}
@@ -293,12 +342,16 @@ export default function SettingsPage() {
           <SettingRow
             title="Board & class"
             description={`${labels.stream ?? 'Custom stream'} · used for every library and PYQ path`}
+            icon={<GraduationCap />}
+            theme="profile"
           >
             {optionsLoading ? (
               <Skeleton className="h-11 w-full" />
             ) : optionsError ? (
               <ErrorState
                 compact
+                illustration="graduation"
+                theme="profile"
                 title="Couldn't load your classes"
                 description="We could not load the board and class options. Try again."
                 onRetry={retryOptions}
@@ -306,6 +359,8 @@ export default function SettingsPage() {
             ) : boards.length === 0 || classes.length === 0 ? (
               <EmptyState
                 compact
+                illustration="graduation"
+                theme="profile"
                 title="No options yet"
                 description="Board and class options will appear here once they are available."
               />
@@ -321,7 +376,7 @@ export default function SettingsPage() {
             )}
           </SettingRow>
 
-          <RowShell>
+          <RowShell icon={<Clock />} theme="exam">
             <Select
               id="reminder-time"
               label="Reminder time"
@@ -341,7 +396,7 @@ export default function SettingsPage() {
             </p>
           </RowShell>
 
-          <RowShell>
+          <RowShell icon={<Bell />} theme="planner">
             <Switch
               checked={preferences.studyReminders}
               onChange={(checked) => {
@@ -359,7 +414,7 @@ export default function SettingsPage() {
             />
           </RowShell>
 
-          <RowShell>
+          <RowShell icon={<CalendarDays />} theme="exam">
             <Switch
               checked={preferences.notifications}
               onChange={(checked) => {
@@ -377,7 +432,7 @@ export default function SettingsPage() {
             />
           </RowShell>
 
-          <RowShell>
+          <RowShell icon={<Flame />} theme="streak">
             <Switch
               checked={preferences.haptics}
               onChange={(checked) => {
@@ -398,9 +453,12 @@ export default function SettingsPage() {
       </section>
 
       {/* --------------------------------- data -------------------------------- */}
+      {/* The only section that removes things, so it gets its own calm, warm
+          ground instead of an alarming one. */}
       <section aria-labelledby="settings-data">
         <SectionHeader
           id="settings-data"
+          eyebrow="Local storage"
           title="Data"
           subtitle="Everything here lives locally on this device"
           action={
@@ -409,7 +467,7 @@ export default function SettingsPage() {
             </Badge>
           }
         />
-        <Card padded={false}>
+        <Card padded={false} tone="cream">
           <SettingRow
             title="Recent searches"
             description={
@@ -417,6 +475,8 @@ export default function SettingsPage() {
                 ? `${recentSearches.length} ${recentSearches.length === 1 ? 'entry' : 'entries'} in your search history`
                 : 'No recent searches stored'
             }
+            icon={<Search />}
+            theme="search"
             controlClassName="sm:flex sm:justify-end"
           >
             <Button
@@ -437,6 +497,8 @@ export default function SettingsPage() {
                 ? `${favorites.length} saved ${favorites.length === 1 ? 'item' : 'items'} in your quick list`
                 : 'Nothing saved yet'
             }
+            icon={<Bookmark />}
+            theme="library"
             controlClassName="sm:flex sm:justify-end"
           >
             <Button
@@ -453,6 +515,8 @@ export default function SettingsPage() {
           <SettingRow
             title="Onboarding answers"
             description="Board, class, subjects, exam date and daily goal"
+            icon={<Layers />}
+            theme="reference"
             controlClassName="sm:flex sm:justify-end"
           >
             <Button variant="outline" size="md" icon={<RotateCcw />} onClick={() => setConfirm('onboarding')}>
@@ -464,15 +528,22 @@ export default function SettingsPage() {
 
       {/* -------------------------------- about -------------------------------- */}
       <section aria-labelledby="settings-about">
-        <SectionHeader id="settings-about" title="About" subtitle="Version, licences and feedback" />
+        <SectionHeader
+          id="settings-about"
+          eyebrow="The app"
+          title="About"
+          subtitle="Version, licences and feedback"
+        />
         <Card padded={false}>
-          <SettingRow title="Version" description="StudyOS · Android-first study companion">
+          <SettingRow title="Version" description="StudyOS · Android-first study companion" icon={<Info />} theme="neutral">
             <span className="tabular text-sm font-semibold text-foreground sm:text-right">0.1.0</span>
           </SettingRow>
 
           <SettingRow
             title="Open-source licences"
             description="React, Tailwind CSS, Anime.js and friends"
+            icon={<FileText />}
+            theme="reference"
             controlClassName="sm:flex sm:justify-end"
           >
             <Button variant="outline" size="md" icon={<FileText />} onClick={() => setLicensesOpen(true)}>
@@ -483,6 +554,8 @@ export default function SettingsPage() {
           <SettingRow
             title="Send feedback"
             description="Bugs, requests and study-tool ideas"
+            icon={<Send />}
+            theme="coral"
             controlClassName="sm:flex sm:justify-end"
           >
             <Button
@@ -509,6 +582,7 @@ export default function SettingsPage() {
         onClose={() => setConfirm(null)}
         title={confirmConfig?.title ?? 'Confirm'}
         description={confirmConfig?.description}
+        className="sm:rounded-hero"
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirm(null)}>
@@ -535,6 +609,7 @@ export default function SettingsPage() {
         onClose={() => setLicensesOpen(false)}
         title="Open-source licences"
         description="StudyOS ships with these projects."
+        className="sm:rounded-hero"
         footer={
           <Button variant="primary" onClick={() => setLicensesOpen(false)}>
             Close

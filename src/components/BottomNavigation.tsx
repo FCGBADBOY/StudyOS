@@ -52,7 +52,7 @@ export function BottomNavigation() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface shadow-nav md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 shadow-nav backdrop-blur-xl supports-[backdrop-filter]:bg-surface/85 md:hidden"
     >
       <div
         ref={containerRef}
@@ -65,6 +65,7 @@ export function BottomNavigation() {
           data-nav-indicator
           className={cn(
             'pointer-events-none absolute top-1.5 bottom-1.5 left-1.5 rounded-tile bg-brand-soft',
+            'shadow-[0_4px_14px_-8px_var(--brand-ring)]',
             'opacity-0',
           )}
         />
@@ -86,16 +87,16 @@ export function BottomNavigation() {
                 data-nav-icon
                 aria-hidden
                 className={cn(
-                  'transition-colors duration-150 [&_svg]:h-[21px] [&_svg]:w-[21px] [&_svg]:stroke-[1.7]',
-                  active ? 'text-brand' : 'text-faint',
+                  'transition-colors duration-150 [&_svg]:h-[21px] [&_svg]:w-[21px]',
+                  active ? 'text-brand [&_svg]:stroke-[2.1]' : 'text-faint [&_svg]:stroke-[1.7]',
                 )}
               >
                 <Icon />
               </span>
               <span
                 className={cn(
-                  'text-[10.5px] font-medium leading-none transition-colors duration-150',
-                  active ? 'text-brand-soft-fg' : 'text-faint',
+                  'text-[10.5px] leading-none transition-colors duration-150',
+                  active ? 'font-bold text-brand-soft-fg' : 'font-medium text-faint',
                 )}
               >
                 {item.label}

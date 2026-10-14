@@ -1,16 +1,17 @@
-import { useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Flame, Target } from 'lucide-react'
 import type { ConceptFrequency, PriorityLevel } from '@/types'
 import { Badge, Card, ProgressBar } from './ui'
 import { subjectAccent } from '@/utils/subject'
+import type { ThemeKey } from '@/config/visual'
 import { cn } from '@/utils/cn'
 import { useStagger } from '@/hooks'
 
-const PRIORITY_STYLE: Record<PriorityLevel, { className: string; icon: ReactNode }> = {
-  'HIGH PRIORITY': { className: 'border-danger/40 bg-danger-soft text-danger', icon: <Flame /> },
-  'MEDIUM PRIORITY': { className: 'border-warning/40 bg-warning-soft text-warning', icon: <Target /> },
-  'LOW PRIORITY': { className: 'border-border bg-surface-muted text-muted', icon: <Target /> },
+/** Priority is a status, so it resolves through the theme vocabulary. */
+const PRIORITY: Record<PriorityLevel, { theme: ThemeKey; icon: ReactNode }> = {
+  'HIGH PRIORITY': { theme: 'danger', icon: <Flame /> },
+  'MEDIUM PRIORITY': { theme: 'warning', icon: <Target /> },
+  'LOW PRIORITY': { theme: 'neutral', icon: <Target /> },
 }
 
 export interface ConceptCardProps {
@@ -21,11 +22,15 @@ export interface ConceptCardProps {
 
 /**
  * PYQ "concept frequency" card — appearances, priority and a per-year trend.
- * The trend bars stagger in with Anime.js.
+ *
+ * The subject owns the ground colour (trend panel, chapter label, bar fill) and
+ * the priority owns the stamp, so a grid of these scans as "which subject,
+ * how urgent" before a single word is read. The trend bars stagger in with
+ * Anime.js.
  */
 export function ConceptCard({ concept, className, onOpen }: ConceptCardProps) {
   const accent = subjectAccent(concept.subjectId)
-  const priority = PRIORITY_STYLE[concept.priority]
+  const priority = PRIORITY[concept.priority]
   const trendRef = useStagger<HTMLDivElement>({ step: 45, distance: 8, scale: false })
   const maxTrend = Math.max(1, ...concept.trend)
 
@@ -49,21 +54,21 @@ export function ConceptCard({ concept, className, onOpen }: ConceptCardProps) {
       aria-label={onOpen ? `Open PYQ analysis for ${concept.title}` : undefined}
       className={cn('relative overflow-hidden', className)}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Subject rail down the left edge — the card's identity at a glance. */}
+      <span aria-hidden className={cn('absolute inset-y-0 left-0 w-1', accent.solid)} />
+
+      <div className="flex items-start justify-between gap-3 pl-2">
         <div className="min-w-0">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-              priority.className,
-            )}
-          >
-            {priority.icon}
+          <Badge theme={priority.theme} uppercase emphasis icon={priority.icon}>
             {concept.priority}
-          </span>
+          </Badge>
           <h3 className="mt-2 text-[15px] font-semibold leading-snug text-foreground">
             {concept.title}
           </h3>
-          <p className={cn('mt-0.5 text-[12px] font-medium', accent.text)}>{concept.chapter}</p>
+          <p className={cn('mt-1 flex items-center gap-1.5 text-[12px] font-medium', accent.text)}>
+            <span aria-hidden className={cn('h-1.5 w-1.5 shrink-0 rounded-full', accent.solid)} />
+            <span className="min-w-0 truncate">{concept.chapter}</span>
+          </p>
         </div>
 
         <div className="shrink-0 text-right">
@@ -76,47 +81,50 @@ export function ConceptCard({ concept, className, onOpen }: ConceptCardProps) {
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1 text-[11px]">
-        <Badge variant="outline" className="tabular">
+      <div className="mt-3 flex flex-wrap gap-1.5 pl-2 text-[11px]">
+        <Badge variant="neutral" className="tabular">
           {concept.marks} marks
         </Badge>
-        <Badge variant="outline">{concept.difficulty}</Badge>
-        <Badge variant="outline" className="tabular">
+        <Badge variant="neutral">{concept.difficulty}</Badge>
+        <Badge variant="neutral" className="tabular">
           {concept.years.length} years
         </Badge>
       </div>
 
-      <div className="mt-3">
-        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-faint">
+      {/* Trend lives on the subject's own tint so the series reads as "this subject". */}
+      <div className={cn('mt-3 rounded-tile p-3 pl-2', accent.soft)}>
+        <p className={cn('mb-1.5 text-[11px] font-semibold uppercase tracking-wide', accent.text)}>
           Year-on-year appearances
         </p>
         <div ref={trendRef} className="flex h-10 items-end gap-1" aria-hidden>
           {concept.trend.map((value, index) => (
             <div
               key={index}
-              className={cn('flex-1 rounded-[3px]', value ? accent.solid : 'bg-surface-sunken')}
+              className={cn('flex-1 rounded-[3px]', value ? accent.solid : 'bg-surface')}
               style={{ height: `${28 + (value / maxTrend) * 72}%` }}
             />
           ))}
         </div>
-        <div className="mt-1 flex justify-between text-[10px] tabular text-faint">
+        <div className={cn('mt-1 flex justify-between text-[10px] tabular', accent.text)}>
           <span>{concept.years[0]}</span>
           <span>{concept.years[concept.years.length - 1]}</span>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 text-[12px] text-muted">
+      <div className="mt-3 flex items-center justify-between gap-3 pl-2 text-[12px] text-muted">
         <span>Frequency vs. subject average</span>
         <span className="tabular font-semibold text-foreground">
           {Math.round((concept.appearances / 8) * 100)}%
         </span>
       </div>
-      <ProgressBar
-        value={Math.round((concept.appearances / 8) * 100)}
-        size="xs"
-        variant={concept.priority === 'HIGH PRIORITY' ? 'danger' : 'warning'}
-        className="mt-1.5"
-      />
+      <div className="pl-2">
+        <ProgressBar
+          value={Math.round((concept.appearances / 8) * 100)}
+          size="xs"
+          variant={concept.priority === 'HIGH PRIORITY' ? 'danger' : 'warning'}
+          className="mt-1.5"
+        />
+      </div>
     </Card>
   )
 }

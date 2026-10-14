@@ -5,6 +5,11 @@
  * (headings, lists, bold/italic, inline code, fenced code, blockquotes,
  * tables and horizontal rules) and nothing else — no raw HTML, ever. Every
  * node is built as React elements, so a model cannot inject markup.
+ *
+ * Visually it is treated as a *document* rather than a wall of text: a
+ * comfortable measure, headings with real hierarchy, tinted callout panels for
+ * blockquotes, monospaced `formula` panels for equations and code, and a list
+ * rhythm that stays legible at 360px.
  */
 import type { ReactNode } from 'react'
 import { cn } from '@/utils/cn'
@@ -52,12 +57,19 @@ function renderInline(tokens: Inline[], keyBase: string): ReactNode[] {
     switch (token.kind) {
       case 'code':
         return (
-          <code key={key} className="rounded bg-surface-sunken px-1 py-0.5 font-mono text-[12px] text-foreground">
+          <code
+            key={key}
+            className="rounded-[6px] bg-surface-sunken px-1.5 py-0.5 font-mono text-[12px] break-words text-foreground"
+          >
             {token.value}
           </code>
         )
       case 'strong':
-        return <strong key={key}>{token.value}</strong>
+        return (
+          <strong key={key} className="font-bold text-foreground">
+            {token.value}
+          </strong>
+        )
       case 'em':
         return <em key={key}>{token.value}</em>
       case 'link':
@@ -67,7 +79,7 @@ function renderInline(tokens: Inline[], keyBase: string): ReactNode[] {
             href={token.href}
             target="_blank"
             rel="noreferrer noopener"
-            className="font-medium text-brand underline underline-offset-2"
+            className="font-medium text-brand underline decoration-brand/40 underline-offset-2 hover:decoration-brand"
           >
             {token.value}
           </a>
@@ -188,6 +200,14 @@ export function parseBlocks(markdown: string): Block[] {
   return blocks
 }
 
+/** Headings scale down the deeper they go, so structure survives on a phone. */
+function headingClass(level: number): string {
+  if (level <= 2) return 'mt-4 text-[15.5px] font-bold tracking-tight text-foreground first:mt-0'
+  if (level === 3) return 'mt-3 text-[14px] font-bold tracking-tight text-foreground first:mt-0'
+  if (level === 4) return 'mt-3 text-[13px] font-bold uppercase tracking-[0.08em] text-muted first:mt-0'
+  return 'mt-3 text-[12.5px] font-semibold uppercase tracking-[0.08em] text-faint first:mt-0'
+}
+
 function renderTable(lines: string[]): ReactNode {
   const cells = (row: string) =>
     row.trim().replace(/^\||\|$/g, '').split('|').map((cell) => cell.trim())
@@ -195,12 +215,16 @@ function renderTable(lines: string[]): ReactNode {
   if (!head || !separator) return null
 
   return (
-    <div className="overflow-x-auto no-scrollbar">
-      <table className="w-full border-collapse text-left text-[13px]">
+    /* Horizontal scroll lives inside the panel — the page never widens. */
+    <div className="max-w-full overflow-x-auto rounded-tile bg-cream no-scrollbar">
+      <table className="w-full min-w-full border-collapse text-left text-[12.5px]">
         <thead>
           <tr>
             {cells(head).map((cell, index) => (
-              <th key={index} className="border-b border-border-strong px-2 py-1.5 font-semibold text-foreground">
+              <th
+                key={index}
+                className="border-b border-border-strong px-3 py-2 font-bold whitespace-nowrap text-foreground"
+              >
                 {cell}
               </th>
             ))}
@@ -210,7 +234,10 @@ function renderTable(lines: string[]): ReactNode {
           {body.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {cells(row).map((cell, cellIndex) => (
-                <td key={cellIndex} className="border-b border-border px-2 py-1.5 align-top text-muted">
+                <td
+                  key={cellIndex}
+                  className="border-b border-border px-3 py-2 align-top text-muted last:border-b-0"
+                >
                   {renderInline(parseInline(cell), `t${rowIndex}-${cellIndex}`)}
                 </td>
               ))}
@@ -234,13 +261,13 @@ export function Markdown({ text, className }: MarkdownProps) {
   const blocks = parseBlocks(text ?? '')
 
   return (
-    <div className={cn('space-y-2 text-sm leading-relaxed', className)}>
+    <div className={cn('max-w-[64ch] space-y-2.5 text-[14px] leading-[1.65]', className)}>
       {blocks.map((block, index) => {
         const key = `b${index}`
         switch (block.type) {
           case 'heading':
             return (
-              <p key={key} className="pt-1 text-[15px] font-semibold text-foreground">
+              <p key={key} className={headingClass(block.level ?? 1)}>
                 {renderInline(parseInline(block.lines[0] ?? ''), key)}
               </p>
             )
@@ -248,18 +275,23 @@ export function Markdown({ text, className }: MarkdownProps) {
             return (
               <pre
                 key={key}
-                className="formula overflow-x-auto rounded-tile bg-surface-sunken p-3 text-[12px] leading-relaxed text-foreground no-scrollbar"
+                className="formula max-w-full overflow-x-auto rounded-tile bg-surface-sunken p-3 text-[12px] leading-relaxed text-foreground no-scrollbar"
               >
                 <code>{block.lines.join('\n')}</code>
               </pre>
             )
           case 'bullet':
             return (
-              <ul key={key} className="space-y-1.5 pl-1">
+              <ul key={key} className="space-y-1.5">
                 {block.lines.map((line, lineIndex) => (
-                  <li key={lineIndex} className="flex gap-2 text-muted">
-                    <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-soft" />
-                    <span className="min-w-0 break-words">{renderInline(parseInline(line), `${key}-${lineIndex}`)}</span>
+                  <li key={lineIndex} className="flex gap-2.5 text-muted">
+                    <span
+                      aria-hidden
+                      className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand/70"
+                    />
+                    <span className="min-w-0 break-words">
+                      {renderInline(parseInline(line), `${key}-${lineIndex}`)}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -268,30 +300,37 @@ export function Markdown({ text, className }: MarkdownProps) {
             return (
               <ol key={key} className="space-y-1.5">
                 {block.lines.map((line, lineIndex) => (
-                  <li key={lineIndex} className="flex gap-2 text-muted">
+                  <li key={lineIndex} className="flex gap-2.5 text-muted">
                     <span
                       aria-hidden
-                      className="tabular mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-brand-soft text-[10px] font-bold text-brand-soft-fg"
+                      className="tabular mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-[7px] bg-brand-soft text-[11px] font-bold text-brand-soft-fg"
                     >
                       {lineIndex + 1}
                     </span>
-                    <span className="min-w-0 break-words">{renderInline(parseInline(line), `${key}-${lineIndex}`)}</span>
+                    <span className="min-w-0 break-words">
+                      {renderInline(parseInline(line), `${key}-${lineIndex}`)}
+                    </span>
                   </li>
                 ))}
               </ol>
             )
           case 'quote':
             return (
-              <blockquote key={key} className="border-l-2 border-brand-soft pl-3 text-muted italic">
+              <blockquote
+                key={key}
+                className="rounded-tile border-l-[3px] border-brand bg-cream px-3 py-2.5 text-muted italic"
+              >
                 {block.lines.map((line, lineIndex) => (
-                  <p key={lineIndex}>{renderInline(parseInline(line), `${key}-${lineIndex}`)}</p>
+                  <p key={lineIndex} className="min-w-0 break-words">
+                    {renderInline(parseInline(line), `${key}-${lineIndex}`)}
+                  </p>
                 ))}
               </blockquote>
             )
           case 'table':
-            return <div key={key}>{renderTable(block.lines)}</div>
+            return <div key={key} className="max-w-full">{renderTable(block.lines)}</div>
           case 'rule':
-            return <hr key={key} className="border-border" />
+            return <hr key={key} className="my-1 h-px border-0 bg-border" />
           default:
             return (
               <p key={key} className="break-words text-foreground">

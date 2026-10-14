@@ -20,12 +20,14 @@ import {
 } from 'lucide-react'
 import {
   Avatar,
+  BackgroundArt,
   Badge,
   BottomSheet,
   Button,
   Card,
   EmptyState,
   ErrorState,
+  IconTile,
   IconButton,
   Input,
   LinkButton,
@@ -50,8 +52,9 @@ import {
   useSubjects,
 } from '@/hooks'
 import { useApp, useToast } from '@/context/AppProvider'
+import { themeColors, type ThemeKey } from '@/config/visual'
 import { formatDate, formatDuration, formatShortDate, daysUntil, titleCase } from '@/utils/format'
-import { subjectAccent } from '@/utils/subject'
+import { subjectAccent, subjectInitial } from '@/utils/subject'
 import { cn } from '@/utils/cn'
 import type {
   Achievement,
@@ -72,6 +75,16 @@ const ACHIEVEMENT_ICONS: Record<Achievement['icon'], ReactNode> = {
   book: <BookOpen />,
   zap: <Zap />,
   star: <Star />,
+}
+
+/** Each badge family gets its own identity so a grid of them reads as colour. */
+const ACHIEVEMENT_THEMES: Record<Achievement['icon'], ThemeKey> = {
+  flame: 'streak',
+  target: 'progress',
+  trophy: 'exam',
+  book: 'library',
+  zap: 'ai',
+  star: 'pyq',
 }
 
 /** Onboarding answers win; profile data is the fallback for fresh installs. */
@@ -131,40 +144,40 @@ function resolveFavorite(id: string, boardId: string, classId: string, subjects:
 
 /* -------------------------------- stat ---------------------------------- */
 
+/**
+ * Tinted KPI tile: one accent per metric, so the row reads as four different
+ * kinds of progress rather than four copies of the same box.
+ */
 function ProfileStat({
   icon,
   label,
   value,
   suffix,
   decimals = 0,
+  accent = 'brand',
 }: {
   icon: ReactNode
   label: string
   value: number
   suffix?: string
   decimals?: number
+  accent?: ThemeKey
 }) {
   const countRef = useCountUp<HTMLSpanElement>(value, { decimals })
+  const tone = themeColors(accent)
 
   return (
-    <Card className="flex flex-col gap-2 p-4">
-      <span
-        aria-hidden
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-tile bg-brand-soft text-brand-soft-fg [&_svg]:h-[18px] [&_svg]:w-[18px]"
-      >
-        {icon}
-      </span>
-      <div className="flex items-baseline gap-1">
-        <span ref={countRef} aria-hidden className="tabular text-2xl font-bold leading-none text-foreground">
-          0
-        </span>
-        <span className="sr-only">
-          {value}
-          {suffix ? ` ${suffix}` : ''}
-        </span>
-        {suffix && <span className="text-[13px] font-semibold text-muted">{suffix}</span>}
+    <Card tone={accent} className="flex items-start gap-3">
+      <IconTile icon={icon} theme={accent} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[12.5px] font-medium text-muted">{label}</p>
+        <p className="mt-0.5 flex items-baseline gap-1">
+          <span className="tabular text-xl font-bold leading-none tracking-tight text-foreground sm:text-2xl">
+            <span ref={countRef}>{value}</span>
+          </span>
+          {suffix && <span className={cn('text-[13px] font-semibold', tone.onSoft)}>{suffix}</span>}
+        </p>
       </div>
-      <p className="text-[12px] font-medium text-muted">{label}</p>
     </Card>
   )
 }
@@ -172,8 +185,8 @@ function ProfileStat({
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-faint">{label}</p>
-      <p className="mt-0.5 clamp-1 text-sm font-medium text-foreground">{value}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{label}</p>
+      <p className="mt-0.5 clamp-1 text-sm font-semibold text-foreground">{value}</p>
     </div>
   )
 }
@@ -328,20 +341,20 @@ export default function ProfilePage() {
     return (
       <div role="status" aria-live="polite" className="space-y-6 sm:space-y-8">
         <span className="sr-only">Loading your profile…</span>
-        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-56 w-full rounded-hero sm:h-64" />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-32" />
+            <Skeleton key={index} className="h-28 rounded-card" />
           ))}
         </div>
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-64 w-full rounded-card" />
+        <Skeleton className="h-40 w-full rounded-card" />
       </div>
     )
   }
 
   if (profileQuery.error) {
-    return <ErrorState onRetry={profileQuery.refetch} />
+    return <ErrorState onRetry={profileQuery.refetch} illustration="notebook" theme="profile" />
   }
 
   if (!profile) {
@@ -349,6 +362,8 @@ export default function ProfilePage() {
       <EmptyState
         title="No profile yet"
         description="Finish setup and your profile, stats and achievements will appear here."
+        illustration="graduation"
+        theme="profile"
         action={
           <LinkButton to="/onboarding" variant="outline" size="md">
             Run setup
@@ -364,42 +379,82 @@ export default function ProfilePage() {
     : profile.targetExam
 
   return (
-    <div ref={pageRef} className="space-y-6 sm:space-y-8">
+    <div ref={pageRef} className="space-y-7 sm:space-y-9">
       {/* ------------------------------ identity ------------------------------ */}
-      <section aria-labelledby="profile-name" className="rounded-card border border-border bg-surface p-4 shadow-card sm:p-6">
-        <div className="flex items-start gap-4 sm:gap-5">
-          <Avatar name={displayName} initials={profile.initials} src={profile.avatar || undefined} size="xl" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 id="profile-name" className="clamp-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-                  {displayName}
-                </h1>
-                <p className="mt-1 clamp-1 text-sm text-muted">
-                  @{profile.username} · {profile.school}
-                </p>
+      {/* The dominant surface of the page: warm ground, colour field behind it,
+          the student's face and everything that defines them. */}
+      <section
+        aria-labelledby="profile-name"
+        className="relative isolate overflow-hidden rounded-hero bg-cream shadow-card"
+      >
+        <BackgroundArt theme="profile" geometry intensity="subtle" />
+        <span
+          aria-hidden
+          className="pattern-dots pointer-events-none absolute inset-y-0 right-0 w-1/3 opacity-[0.35]"
+        />
+
+        <div className="relative p-5 sm:p-7 lg:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
+            <Avatar
+              name={displayName}
+              initials={profile.initials}
+              src={profile.avatar || undefined}
+              size="xl"
+              className="ring-4 ring-surface shadow-raised"
+            />
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="eyebrow">Student profile</p>
+                  <h1
+                    id="profile-name"
+                    className="text-display clamp-1 mt-1.5 text-[30px] leading-[1.02] text-foreground sm:text-[38px]"
+                  >
+                    {displayName}
+                  </h1>
+                  <p className="mt-2 clamp-1 text-sm text-muted">
+                    @{profile.username} · {profile.school}
+                  </p>
+                </div>
+                <IconButton label="Edit profile" variant="outline" size="lg" onClick={openEditor}>
+                  <Pencil />
+                </IconButton>
               </div>
-              <IconButton label="Edit profile" variant="outline" size="lg" onClick={openEditor}>
-                <Pencil />
-              </IconButton>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Badge variant="brand" icon={<GraduationCap />}>
-                {labels.board} · {labels.classLabel}
-              </Badge>
-              {labels.stream && <Badge variant="neutral">{labels.stream}</Badge>}
-              <Badge variant="success" icon={<Flame />}>
-                <span className="tabular">{profile.streak}</span> day streak
-              </Badge>
+
+              {/* Class · board · stream — the academic identity at a glance */}
+              <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] font-semibold text-foreground">
+                <GraduationCap aria-hidden className="h-4 w-4 shrink-0 text-brand" />
+                <span className="tabular">{labels.classLabel}</span>
+                <span aria-hidden className="text-faint">
+                  ·
+                </span>
+                <span>{labels.board}</span>
+                {labels.stream && (
+                  <>
+                    <span aria-hidden className="text-faint">
+                      ·
+                    </span>
+                    <span className="text-muted">{labels.stream}</span>
+                  </>
+                )}
+              </p>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge variant="success" icon={<Flame />}>
+                  <span className="tabular">{profile.streak}</span> day streak
+                </Badge>
+              </div>
+
+              {/* Detail band — the four facts that shape every recommendation */}
+              <div className="mt-5 grid grid-cols-2 gap-4 rounded-card bg-surface p-4 shadow-card sm:grid-cols-4">
+                <InfoItem label="Target exam" value={targetLabel} />
+                <InfoItem label="Daily goal" value={formatDuration(dailyGoal)} />
+                <InfoItem label="School" value={profile.school} />
+                <InfoItem label="Member since" value={formatDate(profile.joined)} />
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4 sm:grid-cols-4">
-          <InfoItem label="Target exam" value={targetLabel} />
-          <InfoItem label="Daily goal" value={formatDuration(dailyGoal)} />
-          <InfoItem label="School" value={profile.school} />
-          <InfoItem label="Member since" value={formatDate(profile.joined)} />
         </div>
       </section>
 
@@ -407,22 +462,42 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-stats">
         <SectionHeader
           id="profile-stats"
+          eyebrow="Momentum"
           title="Your numbers"
           subtitle="Streak, study time and problem solving"
         />
         {progressQuery.error ? (
           <ErrorState
             compact
+            illustration="target"
+            theme="brand"
             title="Stats unavailable"
             description="We could not load your study numbers. Check your connection and try again."
             onRetry={progressQuery.refetch}
           />
         ) : (
-          <div ref={statsRef} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <ProfileStat icon={<Flame />} label="Study streak" value={profile.streak} suffix="days" />
-            <ProfileStat icon={<Clock />} label="Hours this week" value={weekHours} suffix="hrs" decimals={1} />
-            <ProfileStat icon={<BookOpen />} label="Chapters completed" value={profile.chaptersCompleted} />
-            <ProfileStat icon={<Target />} label="Questions solved" value={profile.questionsSolved} />
+          <div ref={statsRef} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <ProfileStat icon={<Flame />} label="Study streak" value={profile.streak} suffix="days" accent="streak" />
+            <ProfileStat
+              icon={<Clock />}
+              label="Hours this week"
+              value={weekHours}
+              suffix="hrs"
+              decimals={1}
+              accent="planner"
+            />
+            <ProfileStat
+              icon={<BookOpen />}
+              label="Chapters completed"
+              value={profile.chaptersCompleted}
+              accent="progress"
+            />
+            <ProfileStat
+              icon={<Target />}
+              label="Questions solved"
+              value={profile.questionsSolved}
+              accent="pyq"
+            />
           </div>
         )}
       </section>
@@ -431,53 +506,56 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-progress">
         <SectionHeader
           id="profile-progress"
+          eyebrow="Syllabus"
           title="Syllabus progress"
           subtitle={`${labels.board} ${labels.classLabel} · ${trackedSubjects.length} subjects tracked`}
         />
         {trackedSubjects.length === 0 ? (
           <EmptyState
             compact
+            illustration="book"
+            theme="library"
             title="No subjects tracked yet"
             description="Practise in the library or answer a few setup questions and your syllabus progress will show up here."
           />
         ) : (
-        <Card>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
-            <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">
-              <ProgressRing value={overall} size={112} stroke={9} label={`Overall syllabus ${overall}%`}>
-                <span className="tabular text-2xl font-bold leading-none text-foreground">{overall}%</span>
-                <span className="mt-1 text-[11px] font-medium text-muted">syllabus</span>
-              </ProgressRing>
-              <p className="text-center text-[12px] text-muted">
-                <span className="tabular font-semibold text-foreground">{profile.chaptersCompleted}</span>{' '}
-                chapters fully completed
-              </p>
-            </div>
+          <Card tone="cream">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
+              <div className="flex shrink-0 flex-col items-center gap-2 sm:w-44">
+                <ProgressRing value={overall} size={112} stroke={9} label={`Overall syllabus ${overall}%`}>
+                  <span className="tabular text-2xl font-bold leading-none text-foreground">{overall}%</span>
+                  <span className="mt-1 text-[11px] font-medium text-muted">syllabus</span>
+                </ProgressRing>
+                <p className="text-center text-[12px] text-muted">
+                  <span className="tabular font-semibold text-foreground">{profile.chaptersCompleted}</span>{' '}
+                  chapters fully completed
+                </p>
+              </div>
 
-            <div className="min-w-0 flex-1 space-y-4">
-              {trackedSubjects.map((subject) => {
-                const accent = subjectAccent(subject.id)
-                return (
-                  <div key={subject.id} className={accent.text}>
-                    <ProgressBar
-                      variant="current"
-                      size="sm"
-                      value={subject.progress}
-                      label={subject.name}
-                      valueText={`${subject.progress}%`}
-                    />
-                    <p className="mt-1 text-[12px] text-muted">
-                      <span className="tabular">
-                        {subject.completedChapters}/{subject.totalChapters}
-                      </span>{' '}
-                      chapters · <span className="tabular">{subject.accuracy}%</span> accuracy
-                    </p>
-                  </div>
-                )
-              })}
+              <div className="min-w-0 flex-1 space-y-4">
+                {trackedSubjects.map((subject) => {
+                  const accent = subjectAccent(subject.id)
+                  return (
+                    <div key={subject.id} className={accent.text}>
+                      <ProgressBar
+                        variant="current"
+                        size="sm"
+                        value={subject.progress}
+                        label={subject.name}
+                        valueText={`${subject.progress}%`}
+                      />
+                      <p className="mt-1 text-[12px] text-muted">
+                        <span className="tabular">
+                          {subject.completedChapters}/{subject.totalChapters}
+                        </span>{' '}
+                        chapters · <span className="tabular">{subject.accuracy}%</span> accuracy
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
         )}
       </section>
 
@@ -485,10 +563,11 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-achievements">
         <SectionHeader
           id="profile-achievements"
+          eyebrow="Recognition"
           title="Achievements"
           subtitle="Badges for consistency and mastery"
           action={
-            <Badge variant="brand" icon={<Trophy />}>
+            <Badge theme="exam" icon={<Trophy />}>
               <span className="tabular">{unlocked.length}</span> of {profile.achievements.length}
             </Badge>
           }
@@ -496,56 +575,62 @@ export default function ProfilePage() {
         {profile.achievements.length === 0 ? (
           <EmptyState
             compact
+            illustration="target"
+            theme="exam"
             title="No badges yet"
             description="Keep your streak alive and complete chapters — badges unlock as you go."
           />
         ) : (
-        <ul ref={achievementsRef} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {profile.achievements.map((entry) => (
-            <li
-              key={entry.id}
-              data-achievement
-              data-earned={entry.earned ? 'true' : undefined}
-              className={cn(
-                'rounded-card border p-4 shadow-card',
-                entry.earned ? 'border-border bg-surface' : 'border-border bg-surface-muted',
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <span
-                  data-celebrate-icon
-                  aria-hidden
-                  className={cn(
-                    'grid h-9 w-9 shrink-0 place-items-center rounded-tile [&_svg]:h-[18px] [&_svg]:w-[18px]',
-                    entry.earned ? 'bg-brand-soft text-brand-soft-fg' : 'bg-surface-sunken text-faint',
-                  )}
+          <ul ref={achievementsRef} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {profile.achievements.map((entry) => {
+              const tone = ACHIEVEMENT_THEMES[entry.icon]
+              return (
+                <li
+                  key={entry.id}
+                  data-achievement
+                  data-earned={entry.earned ? 'true' : undefined}
+                  className="h-full"
                 >
-                  {entry.earned ? ACHIEVEMENT_ICONS[entry.icon] : <Lock />}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold leading-tight text-foreground">{entry.title}</p>
-                  <p className="mt-1 clamp-2 text-[12px] leading-snug text-muted">{entry.description}</p>
-                </div>
-              </div>
-              {entry.earned ? (
-                <div className="mt-3">
-                  <Badge variant="success" icon={<Trophy />}>
-                    Unlocked
-                  </Badge>
-                </div>
-              ) : typeof entry.progress === 'number' ? (
-                <ProgressBar
-                  className="mt-3"
-                  size="xs"
-                  variant="warning"
-                  value={entry.progress}
-                  label={`${entry.title} progress`}
-                  valueText={`${entry.progress}%`}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                  <Card
+                    padded
+                    elevation={entry.earned ? 'card' : 'flat'}
+                    tone={entry.earned ? 'default' : 'cream'}
+                    className={cn('h-full', !entry.earned && 'opacity-90')}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span data-celebrate-icon className="shrink-0">
+                        <IconTile
+                          icon={entry.earned ? ACHIEVEMENT_ICONS[entry.icon] : <Lock />}
+                          theme={entry.earned ? tone : 'neutral'}
+                          size="sm"
+                        />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight text-foreground">{entry.title}</p>
+                        <p className="mt-1 clamp-2 text-[12px] leading-snug text-muted">{entry.description}</p>
+                      </div>
+                    </div>
+                    {entry.earned ? (
+                      <div className="mt-3">
+                        <Badge theme="success" icon={<Trophy />}>
+                          Unlocked
+                        </Badge>
+                      </div>
+                    ) : typeof entry.progress === 'number' ? (
+                      <ProgressBar
+                        className="mt-3"
+                        size="xs"
+                        variant="warning"
+                        value={entry.progress}
+                        label={`${entry.title} progress`}
+                        valueText={`${entry.progress}%`}
+                      />
+                    ) : null}
+                  </Card>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </section>
 
@@ -553,43 +638,50 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-activity">
         <SectionHeader
           id="profile-activity"
+          eyebrow="Timeline"
           title="Recent activity"
           subtitle="Your last study sessions, newest first"
         />
         {profile.history.length === 0 ? (
           <EmptyState
             compact
+            illustration="calendar"
+            theme="planner"
             title="No activity yet"
             description="Your recent study sessions will show up here, newest first."
           />
         ) : (
-        <Card padded={false}>
-          <ol ref={activityRef}>
-            {profile.history.map((entry) => {
-              const accent = subjectAccent(entry.subjectId)
-              return (
-                <li key={entry.id} className="border-t border-border first:border-t-0">
-                  <Link
-                    to={`/library/${labels.boardId}/${labels.classId}/${entry.subjectId}`}
-                    className="flex items-start gap-3 px-4 py-3.5 transition-colors duration-150 hover:bg-surface-muted"
-                  >
-                    <span aria-hidden className={cn('mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full', accent.solid)} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block clamp-1 text-sm font-medium text-foreground">{entry.title}</span>
-                      <span className="mt-0.5 block text-[12px] text-muted">
-                        {subjectNameOf(entry.subjectId, subjects)} · {formatShortDate(entry.date)} ·{' '}
-                        <span className="tabular">{entry.questions}</span> questions
+          <Card padded={false}>
+            <ol ref={activityRef}>
+              {profile.history.map((entry) => {
+                const accent = subjectAccent(entry.subjectId)
+                return (
+                  <li key={entry.id} className="border-t border-border first:border-t-0">
+                    <Link
+                      to={`/library/${labels.boardId}/${labels.classId}/${entry.subjectId}`}
+                      className="flex items-start gap-3 px-4 py-3.5 outline-none transition-colors duration-150 hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:-ring-inset"
+                    >
+                      <IconTile
+                        icon={<span className="text-[11px] font-bold">{subjectInitial(entry.subjectId)}</span>}
+                        theme={accent.theme}
+                        size="xs"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block clamp-1 text-sm font-medium text-foreground">{entry.title}</span>
+                        <span className="mt-0.5 block text-[12px] text-muted">
+                          {subjectNameOf(entry.subjectId, subjects)} · {formatShortDate(entry.date)} ·{' '}
+                          <span className="tabular">{entry.questions}</span> questions
+                        </span>
                       </span>
-                    </span>
-                    <Badge variant="neutral" className="tabular shrink-0">
-                      {formatDuration(entry.minutes)}
-                    </Badge>
-                  </Link>
-                </li>
-              )
-            })}
-          </ol>
-        </Card>
+                      <Badge variant="neutral" className="tabular shrink-0">
+                        {formatDuration(entry.minutes)}
+                      </Badge>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ol>
+          </Card>
         )}
       </section>
 
@@ -597,6 +689,7 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-favorites">
         <SectionHeader
           id="profile-favorites"
+          eyebrow="Saved"
           title="Favourites"
           subtitle="Chapters you pinned for quick recall"
           action={
@@ -608,6 +701,8 @@ export default function ProfilePage() {
         {favoriteItems.length === 0 ? (
           <EmptyState
             compact
+            illustration="book"
+            theme="library"
             title="No favourites yet"
             description="Bookmark chapters, notes and PYQ papers and they will show up here."
             action={
@@ -623,14 +718,9 @@ export default function ProfilePage() {
                 <li key={item.id} className="border-t border-border first:border-t-0">
                   <Link
                     to={item.to}
-                    className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-150 hover:bg-surface-muted"
+                    className="flex items-center gap-3 px-4 py-3.5 outline-none transition-colors duration-150 hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-brand-ring focus-visible:-ring-inset"
                   >
-                    <span
-                      aria-hidden
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-tile bg-brand-soft text-brand-soft-fg [&_svg]:h-[18px] [&_svg]:w-[18px]"
-                    >
-                      <Bookmark />
-                    </span>
+                    <IconTile icon={<Bookmark />} theme="library" size="xs" />
                     <span className="min-w-0 flex-1">
                       <span className="block clamp-1 text-sm font-medium text-foreground">{item.title}</span>
                       <span className="mt-0.5 block text-[12px] text-muted">{item.meta}</span>
@@ -648,10 +738,11 @@ export default function ProfilePage() {
       <section aria-labelledby="profile-account">
         <SectionHeader
           id="profile-account"
+          eyebrow="Session"
           title="Account"
           subtitle="Replay setup, tune preferences or end the session"
         />
-        <Card>
+        <Card tone="cream">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Button
               variant="secondary"
@@ -711,6 +802,7 @@ export default function ProfilePage() {
             onChange={(event) => setDraft({ ...draft, name: event.target.value })}
             maxLength={48}
             autoComplete="name"
+            className="[&_div:focus-within]:ring-2 [&_div:focus-within]:ring-brand-ring [&_div:focus-within]:ring-inset"
           />
           <Input
             label="Exam target date"
@@ -722,6 +814,7 @@ export default function ProfilePage() {
                 ? `${formatDate(draft.examDate)} · ${daysUntil(draft.examDate)} days left`
                 : 'Powers the countdown shown on your profile.'
             }
+            className="[&_div:focus-within]:ring-2 [&_div:focus-within]:ring-brand-ring [&_div:focus-within]:ring-inset"
           />
           <Slider
             label="Daily study goal"
@@ -741,6 +834,7 @@ export default function ProfilePage() {
         onClose={() => setSignOutOpen(false)}
         title="Sign out of StudyOS?"
         description="You will need to sign in again to sync progress across devices."
+        className="sm:rounded-hero"
         footer={
           <>
             <Button variant="ghost" onClick={() => setSignOutOpen(false)}>

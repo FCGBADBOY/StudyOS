@@ -29,7 +29,21 @@ import {
   ScrollText,
   Sparkles,
 } from 'lucide-react'
-import { Button, Card, EmptyState, ErrorState, IconButton, Input, SkeletonList, Slider } from '@/components/ui'
+import {
+  BackgroundArt,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  IconTile,
+  Illustration,
+  IconButton,
+  Input,
+  SkeletonList,
+  Slider,
+} from '@/components/ui'
+import { Logo } from '@/components/LogoMark'
 import {
   MOTION,
   canAnimate,
@@ -42,6 +56,7 @@ import {
 } from '@/animations'
 import { useOnboardingAnswers, useToast } from '@/context/AppProvider'
 import { useAuth, useBoards, useClasses, useStreams, useSubjects } from '@/hooks'
+import { subjectTheme, themeColors, themeRing, type ThemeKey } from '@/config/visual'
 import type { BoardId, ClassId, StreamId, SubjectId } from '@/types'
 import { cn } from '@/utils/cn'
 import { formatDate } from '@/utils/format'
@@ -66,19 +81,40 @@ const STREAM_ICONS: Record<StreamId, ReactNode> = {
   humanities: <Landmark />,
 }
 
-const VALUES = [
+/** Streams borrow their subject's identity so the three choices differ in hue. */
+const STREAM_THEMES: Record<StreamId, ThemeKey> = {
+  science: 'physics',
+  commerce: 'mathematics',
+  humanities: 'english',
+}
+
+/** Each step owns an identity so the numbered tile reads as a journey. */
+const STEP_META: Record<StepKey, { eyebrow: string; theme: ThemeKey }> = {
+  welcome: { eyebrow: 'Getting started', theme: 'brand' },
+  board: { eyebrow: 'Your syllabus', theme: 'reference' },
+  class: { eyebrow: 'Your level', theme: 'profile' },
+  stream: { eyebrow: 'Your direction', theme: 'planner' },
+  subjects: { eyebrow: 'Your papers', theme: 'notes' },
+  exam: { eyebrow: 'Your countdown', theme: 'exam' },
+  finish: { eyebrow: 'All set', theme: 'success' },
+}
+
+const VALUES: { icon: typeof ScrollText; theme: ThemeKey; title: string; detail: string }[] = [
   {
     icon: ScrollText,
+    theme: 'pyq',
     title: 'PYQ-first practice',
     detail: 'Fifteen years of papers ranked by what boards actually repeat.',
   },
   {
     icon: Bot,
+    theme: 'ai',
     title: 'An AI tutor on call',
     detail: 'Doubts answered in steps, at exactly the difficulty your class expects.',
   },
   {
     icon: BookX,
+    theme: 'mistakes',
     title: 'A mistake book',
     detail: 'Slips are logged and resurfaced until they stop happening.',
   },
@@ -89,17 +125,50 @@ function formatGoal(minutes: number): string {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
 }
 
-function Wordmark() {
+/* ------------------------------------------------------------ step heading -- */
+
+/**
+ * Numbered tile + editorial heading. Every step after the welcome screen uses
+ * it, so the flow always shows where you are and what is being asked.
+ */
+function StepHeading({
+  step,
+  index,
+  title,
+  lead,
+  tile,
+  children,
+}: {
+  step: StepKey
+  index: number
+  title: string
+  lead?: ReactNode
+  /** Swap the numbered tile for a custom one (the finish celebration). */
+  tile?: ReactNode
+  children?: ReactNode
+}) {
+  const meta = STEP_META[step]
+
   return (
-    <span className="inline-flex items-center gap-2">
-      <span
-        aria-hidden
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-tile bg-brand text-[15px] font-bold text-brand-fg shadow-card"
-      >
-        S
-      </span>
-      <span className="text-[17px] font-bold tracking-tight text-foreground">StudyOS</span>
-    </span>
+    <header className="flex items-start gap-3 sm:gap-4">
+      {tile ?? (
+        <IconTile
+          icon={<span className="tabular text-[13px] font-extrabold">{index + 1}</span>}
+          theme={meta.theme}
+          variant="gradient"
+          size="md"
+          className="mt-1 shrink-0"
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="eyebrow">{meta.eyebrow}</p>
+        <h1 id="step-title" className="text-display mt-1.5 text-[26px] text-foreground sm:text-[33px]">
+          {title}
+        </h1>
+        {lead && <p className="mt-2.5 text-sm leading-relaxed text-muted sm:text-[15px]">{lead}</p>}
+        {children}
+      </div>
+    </header>
   )
 }
 
@@ -112,6 +181,7 @@ function OptionCard({
   description,
   meta,
   icon,
+  theme = 'brand',
 }: {
   selected: boolean
   onSelect: () => void
@@ -119,8 +189,10 @@ function OptionCard({
   description?: string
   meta?: string
   icon?: ReactNode
+  theme?: ThemeKey
 }) {
   const checkRef = useRef<HTMLSpanElement>(null)
+  const tone = themeColors(theme)
 
   /* the check pops in whenever a choice becomes selected */
   useLayoutEffect(() => {
@@ -140,24 +212,24 @@ function OptionCard({
     <Card
       interactive
       padded={false}
-      className={cn('overflow-hidden', selected && 'border-brand bg-brand-soft')}
+      tone={selected ? theme : 'default'}
+      elevation={selected ? 'raised' : 'card'}
+      className={cn('overflow-hidden', selected && 'ring-2', selected && themeRing(theme))}
     >
       <button
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
-        className="flex h-full w-full items-start gap-3 p-4 text-left sm:p-5"
+        className="flex h-full w-full items-start gap-3 p-4 text-left outline-none sm:p-5"
       >
         {icon && (
-          <span
-            aria-hidden
-            className={cn(
-              'grid h-9 w-9 shrink-0 place-items-center rounded-tile [&_svg]:h-[18px] [&_svg]:w-[18px]',
-              selected ? 'bg-brand text-brand-fg' : 'bg-surface-muted text-muted',
-            )}
-          >
-            {icon}
-          </span>
+          <IconTile
+            icon={icon}
+            theme={theme}
+            variant={selected ? 'gradient' : 'soft'}
+            size="md"
+            className="shrink-0"
+          />
         )}
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold leading-tight text-foreground">
@@ -169,7 +241,7 @@ function OptionCard({
             </span>
           )}
           {meta && (
-            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-wide text-faint">
+            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-wide text-muted">
               {meta}
             </span>
           )}
@@ -178,7 +250,11 @@ function OptionCard({
           <span
             ref={checkRef}
             aria-hidden
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-brand-fg"
+            className={cn(
+              'grid h-6 w-6 shrink-0 place-items-center rounded-full',
+              tone.solid,
+              tone.onSolid,
+            )}
           >
             <Check className="h-3.5 w-3.5" strokeWidth={3} />
           </span>
@@ -187,6 +263,14 @@ function OptionCard({
     </Card>
   )
 }
+
+/** Shared hint line under every option grid — never faint, always legible. */
+function StepHint({ children }: { children: ReactNode }) {
+  return <p className="mt-3 text-[12px] font-medium leading-snug text-muted">{children}</p>
+}
+
+/** Focus halo for the hand-built exam date field. */
+const FIELD_FOCUS = 'focus:ring-2 focus:ring-brand-ring focus:ring-inset'
 
 /* ------------------------------------------------------------------ page -- */
 
@@ -430,7 +514,7 @@ export default function OnboardingPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
       {/* ------------------------------------------------------------- header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-6">
           <div className="flex h-16 items-center justify-between gap-3">
             <IconButton
@@ -443,8 +527,8 @@ export default function OnboardingPage() {
               <ArrowLeft />
             </IconButton>
 
-            <Link to="/" aria-label="StudyOS home">
-              <Wordmark />
+            <Link to="/" aria-label="StudyOS home" className="rounded-control outline-none focus-visible:ring-2 focus-visible:ring-brand-ring">
+              <Logo size={30} />
             </Link>
 
             <span
@@ -471,64 +555,61 @@ export default function OnboardingPage() {
       </header>
 
       {/* --------------------------------------------------------------- main */}
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-12 pt-8 sm:px-6 sm:pt-10">
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-12 pt-8 sm:px-6 sm:pt-11">
         <div ref={stepRef}>
           {/* ------------------------------------------------------- welcome */}
           {step === 'welcome' && (
             <section aria-labelledby="step-title">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[11px] font-semibold text-accent-fg">
-                <Sparkles aria-hidden className="h-3 w-3" />
+              <Badge variant="accent" icon={<Sparkles />} size="md">
                 Six quick questions
-              </span>
+              </Badge>
 
               <h1
                 id="step-title"
-                className="mt-4 text-xl font-bold tracking-tight text-foreground sm:text-2xl"
+                className="text-display mt-4 text-[30px] leading-[1.03] text-foreground sm:text-[40px]"
               >
                 Welcome to StudyOS
               </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
                 Everything you need to study smarter — in one place that already knows your board,
                 your subjects and your exam date.
               </p>
 
-              <ul className="mt-6 space-y-3">
+              <ul className="mt-7 space-y-3">
                 {VALUES.map((value) => {
                   const Icon = value.icon
                   return (
-                    <li
-                      key={value.title}
-                      className="flex items-start gap-3 rounded-card border border-border bg-surface p-4 shadow-card"
-                    >
-                      <span
-                        aria-hidden
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-tile bg-brand-soft text-brand-soft-fg [&_svg]:h-[18px] [&_svg]:w-[18px]"
-                      >
-                        <Icon />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-foreground">
-                          {value.title}
+                    <li key={value.title}>
+                      <Card padded className="flex items-start gap-3.5">
+                        <IconTile icon={<Icon />} theme={value.theme} size="md" variant="soft" />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-foreground">
+                            {value.title}
+                          </span>
+                          <span className="mt-0.5 block text-[13px] leading-snug text-muted">
+                            {value.detail}
+                          </span>
                         </span>
-                        <span className="mt-0.5 block text-[13px] leading-snug text-muted">
-                          {value.detail}
-                        </span>
-                      </span>
+                      </Card>
                     </li>
                   )
                 })}
               </ul>
 
+              <div className="mt-7 max-w-[300px]">
+                <Illustration name="journey" theme="brand" decorative className="w-full" />
+              </div>
+
               <Button
                 size="lg"
                 fullWidth
-                className="mt-7"
+                className="mt-6"
                 icon={<ArrowRight />}
                 onClick={() => goTo('forward')}
               >
                 Start setup
               </Button>
-              <p className="mt-3 text-center text-[12px] text-faint">
+              <p className="mt-3 text-center text-[12px] font-medium text-muted">
                 About a minute · Saved on this device
               </p>
             </section>
@@ -536,23 +617,22 @@ export default function OnboardingPage() {
 
           {/* --------------------------------------------------------- board */}
           {step === 'board' && (
-            <section aria-labelledby="step-title">
-              <h1
-                id="step-title"
-                className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                Which board do you follow?
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                This decides your syllabus, the papers we show you and how questions are ordered.
-              </p>
+            <section aria-labelledby="step-title" className="space-y-6">
+              <StepHeading
+                step={step}
+                index={index}
+                title="Which board do you follow?"
+                lead="This decides your syllabus, the papers we show you and how questions are ordered."
+              />
 
-              <div className="mt-6">
+              <div>
                 {boardsQuery.loading ? (
                   <SkeletonList count={4} label="Loading boards" />
                 ) : boardsQuery.error ? (
                   <ErrorState
                     compact
+                    illustration="graduation"
+                    theme="reference"
                     title="Couldn't load boards"
                     description="We could not load the board list. Check your connection and try again."
                     onRetry={boardsQuery.refetch}
@@ -560,6 +640,8 @@ export default function OnboardingPage() {
                 ) : boards.length === 0 ? (
                   <EmptyState
                     compact
+                    illustration="graduation"
+                    theme="reference"
                     title="No boards available yet"
                     description="Board options will appear here as soon as they are available."
                   />
@@ -571,6 +653,7 @@ export default function OnboardingPage() {
                         selected={answers.board === board.id}
                         onSelect={() => pickBoard(board.id)}
                         icon={<ScrollText />}
+                        theme="reference"
                         title={board.name}
                         description={board.description}
                         meta={`${board.resourceCount.toLocaleString('en-IN')} resources`}
@@ -580,31 +663,30 @@ export default function OnboardingPage() {
                 )}
               </div>
 
-              <p className="mt-3 text-[12px] text-faint">
+              <StepHint>
                 {boardOption ? `${boardOption.name} selected` : 'Select a board to continue.'}
-              </p>
+              </StepHint>
             </section>
           )}
 
           {/* --------------------------------------------------------- class */}
           {step === 'class' && (
-            <section aria-labelledby="step-title">
-              <h1
-                id="step-title"
-                className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                Which class are you in?
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                Chapters, difficulty and PYQs are tuned to your class.
-              </p>
+            <section aria-labelledby="step-title" className="space-y-6">
+              <StepHeading
+                step={step}
+                index={index}
+                title="Which class are you in?"
+                lead="Chapters, difficulty and PYQs are tuned to your class."
+              />
 
-              <div className="mt-6">
+              <div>
                 {classesQuery.loading ? (
                   <SkeletonList count={4} label="Loading classes" />
                 ) : classesQuery.error ? (
                   <ErrorState
                     compact
+                    illustration="graduation"
+                    theme="profile"
                     title="Couldn't load classes"
                     description="We could not load the class list. Check your connection and try again."
                     onRetry={classesQuery.refetch}
@@ -612,6 +694,8 @@ export default function OnboardingPage() {
                 ) : classes.length === 0 ? (
                   <EmptyState
                     compact
+                    illustration="graduation"
+                    theme="profile"
                     title="No classes available yet"
                     description="Class options will appear here as soon as they are available."
                   />
@@ -623,6 +707,7 @@ export default function OnboardingPage() {
                         selected={answers.classId === entry.id}
                         onSelect={() => pickClass(entry.id)}
                         icon={<GraduationCap />}
+                        theme="profile"
                         title={entry.name}
                         description={entry.description}
                       />
@@ -631,34 +716,35 @@ export default function OnboardingPage() {
                 )}
               </div>
 
-              <p className="mt-3 text-[12px] text-faint">
-                {classOption
-                  ? `${classOption.name} selected`
-                  : 'Select a class to continue.'}
-              </p>
+              <StepHint>
+                {classOption ? `${classOption.name} selected` : 'Select a class to continue.'}
+              </StepHint>
             </section>
           )}
 
           {/* -------------------------------------------------------- stream */}
           {step === 'stream' && (
-            <section aria-labelledby="step-title">
-              <h1
-                id="step-title"
-                className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                Pick your stream
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                {classOption ? `${classOption.name} students choose one of three streams.` : ''}
-                We&apos;ll line up the right subjects next.
-              </p>
+            <section aria-labelledby="step-title" className="space-y-6">
+              <StepHeading
+                step={step}
+                index={index}
+                title="Pick your stream"
+                lead={
+                  <>
+                    {classOption ? `${classOption.name} students choose one of three streams.` : ''}
+                    We&apos;ll line up the right subjects next.
+                  </>
+                }
+              />
 
-              <div className="mt-6">
+              <div>
                 {streamsQuery.loading ? (
                   <SkeletonList count={3} label="Loading streams" />
                 ) : streamsQuery.error ? (
                   <ErrorState
                     compact
+                    illustration="book"
+                    theme="planner"
                     title="Couldn't load streams"
                     description="We could not load the stream list. Check your connection and try again."
                     onRetry={streamsQuery.refetch}
@@ -666,6 +752,8 @@ export default function OnboardingPage() {
                 ) : streams.length === 0 ? (
                   <EmptyState
                     compact
+                    illustration="book"
+                    theme="planner"
                     title="No streams available yet"
                     description="Stream options will appear here as soon as they are available."
                   />
@@ -677,6 +765,7 @@ export default function OnboardingPage() {
                         selected={answers.streamId === stream.id}
                         onSelect={() => pickStream(stream.id)}
                         icon={STREAM_ICONS[stream.id]}
+                        theme={STREAM_THEMES[stream.id]}
                         title={stream.name}
                         description={stream.description}
                       />
@@ -685,35 +774,34 @@ export default function OnboardingPage() {
                 )}
               </div>
 
-              <p className="mt-3 text-[12px] text-faint">
-                {streamOption
-                  ? `${streamOption.name} selected`
-                  : 'Select a stream to continue.'}
-              </p>
+              <StepHint>
+                {streamOption ? `${streamOption.name} selected` : 'Select a stream to continue.'}
+              </StepHint>
             </section>
           )}
 
           {/* ------------------------------------------------------ subjects */}
           {step === 'subjects' && (
-            <section aria-labelledby="step-title">
-              <h1
-                id="step-title"
-                className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                Which subjects are you appearing for?
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                {streamOption
-                  ? `${streamOption.name} stream · ${subjectChoices.length} subject${subjectChoices.length === 1 ? '' : 's'} available`
-                  : 'Pick at least one — you can change this any time in Preferences.'}
-              </p>
+            <section aria-labelledby="step-title" className="space-y-6">
+              <StepHeading
+                step={step}
+                index={index}
+                title="Which subjects are you appearing for?"
+                lead={
+                  streamOption
+                    ? `${streamOption.name} stream · ${subjectChoices.length} subject${subjectChoices.length === 1 ? '' : 's'} available`
+                    : 'Pick at least one — you can change this any time in Preferences.'
+                }
+              />
 
-              <div className="mt-6">
+              <div>
                 {subjectsQuery.loading ? (
                   <SkeletonList count={4} label="Loading subjects" />
                 ) : subjectsQuery.error ? (
                   <ErrorState
                     compact
+                    illustration="book"
+                    theme="notes"
                     title="Couldn't load subjects"
                     description="We could not load the subject list. Check your connection and try again."
                     onRetry={subjectsQuery.refetch}
@@ -721,6 +809,8 @@ export default function OnboardingPage() {
                 ) : subjectChoices.length === 0 ? (
                   <EmptyState
                     compact
+                    illustration="book"
+                    theme="notes"
                     title="No subjects available yet"
                     description="Subjects for your stream will appear here as soon as they are available."
                   />
@@ -732,6 +822,7 @@ export default function OnboardingPage() {
                         selected={answers.subjects.includes(option.id)}
                         onSelect={() => toggleSubject(option.id)}
                         icon={SUBJECT_ICONS[option.id]}
+                        theme={subjectTheme(option.id)}
                         title={option.name}
                         description={option.description}
                       />
@@ -740,28 +831,25 @@ export default function OnboardingPage() {
                 )}
               </div>
 
-              <p className="mt-3 text-[12px] text-faint">
+              <StepHint>
                 {answers.subjects.length > 0
                   ? `${answers.subjects.length} selected`
                   : 'Select at least one subject to continue.'}
-              </p>
+              </StepHint>
             </section>
           )}
 
           {/* ---------------------------------------------------------- exam */}
           {step === 'exam' && (
-            <section aria-labelledby="step-title">
-              <h1
-                id="step-title"
-                className="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                When is your exam?
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                StudyOS works backwards from this date to build your revision runway.
-              </p>
+            <section aria-labelledby="step-title" className="space-y-6">
+              <StepHeading
+                step={step}
+                index={index}
+                title="When is your exam?"
+                lead="StudyOS works backwards from this date to build your revision runway."
+              />
 
-              <div className="mt-6 space-y-5">
+              <div className="space-y-5">
                 <Input
                   label="Exam name"
                   value={examName}
@@ -769,6 +857,7 @@ export default function OnboardingPage() {
                   placeholder={DEFAULT_EXAM_NAME}
                   icon={<FileText />}
                   required
+                  className="[&_div:focus-within]:ring-2 [&_div:focus-within]:ring-brand-ring [&_div:focus-within]:ring-inset"
                 />
 
                 <div>
@@ -785,16 +874,19 @@ export default function OnboardingPage() {
                     value={examDate}
                     onChange={(event) => setExamDate(event.target.value)}
                     aria-describedby="exam-date-hint"
-                    className="h-11 w-full rounded-control border border-border bg-surface px-3.5 text-sm text-foreground outline-none transition-colors focus:border-brand"
+                    className={cn(
+                      'h-11 w-full rounded-control border border-border bg-surface px-3.5 text-sm text-foreground transition-colors focus:border-brand',
+                      FIELD_FOCUS,
+                    )}
                   />
-                  <p id="exam-date-hint" className="mt-1.5 text-[12px] text-faint">
+                  <p id="exam-date-hint" className="mt-1.5 text-[12px] font-medium text-muted">
                     {examDate
                       ? `Countdown starts ${formatDate(examDate)}`
                       : 'Pick the date of your first paper.'}
                   </p>
                 </div>
 
-                <div className="rounded-card border border-border bg-surface-muted p-4">
+                <Card tone="cream">
                   <Slider
                     label="Daily study goal"
                     min={30}
@@ -804,15 +896,17 @@ export default function OnboardingPage() {
                     onChange={setGoal}
                     valueText={formatGoal(goal)}
                   />
-                  <p className="mt-3 text-[12px] leading-snug text-faint">
+                  <p className="mt-3 text-[12px] leading-snug text-muted">
                     {formatGoal(goal)} a day — sessions are split into 25-minute blocks you can
                     actually finish.
                   </p>
-                </div>
+                </Card>
               </div>
 
               {!examDate && (
-                <p className="mt-3 text-[12px] text-warning">Pick your exam date to continue.</p>
+                <p className="text-[12px] font-semibold text-warning">
+                  Pick your exam date to continue.
+                </p>
               )}
             </section>
           )}
@@ -820,103 +914,82 @@ export default function OnboardingPage() {
           {/* -------------------------------------------------------- finish */}
           {step === 'finish' && (
             <section aria-labelledby="step-title">
-              <span
-                data-celebrate-icon
-                aria-hidden
-                className="grid h-14 w-14 place-items-center rounded-full bg-brand text-brand-fg shadow-raised"
-              >
-                <Check className="h-7 w-7" strokeWidth={2.6} />
-              </span>
+              <div className="relative isolate overflow-hidden rounded-hero bg-cream p-5 shadow-card sm:p-8">
+                <BackgroundArt theme="success" intensity="subtle" />
 
-              <h1
-                id="step-title"
-                className="mt-5 text-xl font-bold tracking-tight text-foreground sm:text-2xl"
-              >
-                You&apos;re all set{userName ? `, ${userName}` : ''}
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">
-                Here is what StudyOS will build your dashboard around — you can change any of it
-                later from Preferences.
-              </p>
+                <div className="relative">
+                  <StepHeading
+                    step={step}
+                    index={index}
+                    title={`You're all set${userName ? `, ${userName}` : ''}`}
+                    lead="Here is what StudyOS will build your dashboard around — you can change any of it later from Preferences."
+                    tile={
+                      <span data-celebrate-icon className="block shrink-0">
+                        <IconTile icon={<Check strokeWidth={2.6} />} theme="success" variant="gradient" size="xl" />
+                      </span>
+                    }
+                  />
 
-              <dl className="mt-6 overflow-hidden rounded-card border border-border bg-surface shadow-card">
-                <div className="flex items-start gap-3 border-b border-border p-4">
-                  <span
-                    aria-hidden
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-tile bg-surface-muted text-muted [&_svg]:h-4 [&_svg]:w-4"
+                  <dl className="mt-6 overflow-hidden rounded-card bg-surface shadow-card">
+                    <div className="flex items-start gap-3 border-b border-border p-4">
+                      <IconTile icon={<GraduationCap />} theme="library" size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <dt className="text-[13px] text-muted">Board &amp; class</dt>
+                        <dd className="text-sm font-semibold text-foreground">
+                          {boardOption?.name ?? 'Board not set'} · {classOption?.name ?? 'Class not set'}
+                          {streamOption ? ` · ${streamOption.name}` : ''}
+                        </dd>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 border-b border-border p-4">
+                      <IconTile icon={<Layers />} theme="notes" size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <dt className="text-[13px] text-muted">Subjects</dt>
+                        <dd className="text-sm font-semibold break-words text-foreground">
+                          {selectedSubjects.length > 0
+                            ? selectedSubjects.join(', ')
+                            : 'No subjects selected'}
+                        </dd>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 border-b border-border p-4">
+                      <IconTile icon={<CalendarDays />} theme="exam" size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <dt className="text-[13px] text-muted">Exam</dt>
+                        <dd className="text-sm font-semibold break-words text-foreground">
+                          {examName.trim() || DEFAULT_EXAM_NAME}
+                          {examDate ? ` · ${formatDate(examDate)}` : ''}
+                        </dd>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4">
+                      <IconTile icon={<Clock />} theme="planner" size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <dt className="text-[13px] text-muted">Daily goal</dt>
+                        <dd className="tabular text-sm font-semibold text-foreground">
+                          {formatGoal(goal)} · {goal} min
+                        </dd>
+                      </div>
+                    </div>
+                  </dl>
+
+                  <Button
+                    size="lg"
+                    fullWidth
+                    className="mt-6"
+                    iconRight={<ArrowRight />}
+                    onClick={handleFinish}
                   >
-                    <GraduationCap />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <dt className="text-[13px] text-muted">Board &amp; class</dt>
-                    <dd className="text-sm font-semibold text-foreground">
-                      {boardOption?.name ?? 'Board not set'} · {classOption?.name ?? 'Class not set'}
-                      {streamOption ? ` · ${streamOption.name}` : ''}
-                    </dd>
-                  </div>
+                    Go to dashboard
+                  </Button>
+                  <p className="mt-3 text-center text-[12px] font-medium text-muted">
+                    Your answers are saved on this device.
+                  </p>
                 </div>
-
-                <div className="flex items-start gap-3 border-b border-border p-4">
-                  <span
-                    aria-hidden
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-tile bg-surface-muted text-muted [&_svg]:h-4 [&_svg]:w-4"
-                  >
-                    <Layers />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <dt className="text-[13px] text-muted">Subjects</dt>
-                    <dd className="text-sm font-semibold break-words text-foreground">
-                      {selectedSubjects.length > 0
-                        ? selectedSubjects.join(', ')
-                        : 'No subjects selected'}
-                    </dd>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 border-b border-border p-4">
-                  <span
-                    aria-hidden
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-tile bg-surface-muted text-muted [&_svg]:h-4 [&_svg]:w-4"
-                  >
-                    <CalendarDays />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <dt className="text-[13px] text-muted">Exam</dt>
-                    <dd className="text-sm font-semibold break-words text-foreground">
-                      {examName.trim() || DEFAULT_EXAM_NAME}
-                      {examDate ? ` · ${formatDate(examDate)}` : ''}
-                    </dd>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-4">
-                  <span
-                    aria-hidden
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-tile bg-surface-muted text-muted [&_svg]:h-4 [&_svg]:w-4"
-                  >
-                    <Clock />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <dt className="text-[13px] text-muted">Daily goal</dt>
-                    <dd className="tabular text-sm font-semibold text-foreground">
-                      {formatGoal(goal)} · {goal} min
-                    </dd>
-                  </div>
-                </div>
-              </dl>
-
-              <Button
-                size="lg"
-                fullWidth
-                className="mt-6"
-                iconRight={<ArrowRight />}
-                onClick={handleFinish}
-              >
-                Go to dashboard
-              </Button>
-              <p className="mt-3 text-center text-[12px] text-faint">
-                Your answers are saved on this device.
-              </p>
+              </div>
             </section>
           )}
         </div>
@@ -924,19 +997,31 @@ export default function OnboardingPage() {
 
       {/* ------------------------------------------------------ action bar */}
       {showActionBar && (
-        <div className="sticky bottom-0 z-30 mt-auto safe-bottom border-t border-border bg-background/90 backdrop-blur">
+        <div className="sticky bottom-0 z-30 mt-auto safe-bottom border-t border-border bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
           <div className="mx-auto w-full max-w-2xl px-4 py-4 sm:px-6">
-            <Button
-              size="lg"
-              fullWidth
-              onClick={handleContinue}
-              disabled={!canContinue}
-              iconRight={<ChevronRight />}
-            >
-              Continue
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="sm:hidden"
+                onClick={() => goTo('back')}
+                disabled={isFirst}
+                icon={<ArrowLeft />}
+              >
+                Back
+              </Button>
+              <Button
+                size="lg"
+                className="flex-1"
+                onClick={handleContinue}
+                disabled={!canContinue}
+                iconRight={<ChevronRight />}
+              >
+                Continue
+              </Button>
+            </div>
             {!canContinue && (
-              <p className="mt-2 text-center text-[12px] text-faint">
+              <p className="mt-2 text-center text-[12px] font-medium text-muted">
                 {step === 'subjects'
                   ? 'Select at least one subject to continue.'
                   : 'Make a choice to continue.'}

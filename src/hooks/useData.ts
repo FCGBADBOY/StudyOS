@@ -16,6 +16,7 @@ import { getPlanner, getTodaySessions, getWeek } from '@/services/planner.servic
 import { getBookmarkedKeys } from '@/services/bookmark.service'
 import { getExams, getUpcomingExams } from '@/services/exam.service'
 import { getProfile } from '@/services/profile.service'
+import { getChapterProvenance } from '@/services/provenance.service'
 import { getDashboard } from '@/services/dashboard.service'
 import type { MistakeFilter, MistakeRowType } from '@/types/mistakes'
 import type { PyqFilter } from '@/types/pyq'
@@ -71,6 +72,12 @@ export function useChapterResources(subjectId?: string, chapterSlug?: string) {
 export function useSubjectResources(subjectId?: string) {
   const key = subjectId ? `resources:subject:${subjectId}` : null
   return useQuery(key, () => getSubjectResources(subjectId), { enabled: Boolean(subjectId) })
+}
+
+/** Attribution records for one chapter's published material (spec §51). */
+export function useChapterProvenance(chapterId?: string) {
+  const key = chapterId ? `provenance:chapter:${chapterId}` : null
+  return useQuery(key, () => getChapterProvenance(chapterId as string), { enabled: Boolean(chapterId) })
 }
 
 /* ----------------------------------- PYQ ---------------------------------- */

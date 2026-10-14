@@ -62,6 +62,8 @@ export const ALL_PERMISSIONS = [
   'content.delete',
   'academic.view',
   'academic.manage',
+  'engine.view',
+  'engine.manage',
   'pyq.create',
   'pyq.edit',
   'pyq.import',

@@ -130,6 +130,12 @@ A full content-management portal in the same app: the academic hierarchy, resour
 | `/admin/reports` | Moderation queue + content-quality dashboard |
 | `/admin/analytics` | Growth, popularity, accuracy |
 | `/admin/ai` | AI Studio (embedding queue, usage) |
+| `/admin/content-engine` | Content Engine overview — coverage, health, automation |
+| `/admin/content-engine/jobs` | Async job dashboard (run / pause / retry / cancel) |
+| `/admin/content-engine/review` | Review queue: notes + syllabus diffs |
+| `/admin/content-engine/coverage` | Find missing content + build plan preview |
+| `/admin/content-engine/sources` | Source registry (crawl allow-list, licences) |
+| `/admin/content-engine/pyq-discovery` | PYQ & sample-paper discovery, verification tiers |
 | `/admin/audit` | Append-only audit log |
 | `/admin/settings` | Upload, workflow, platform settings + permission matrix |
 
@@ -430,6 +436,314 @@ The tests import only pure modules (no Deno, no DB, no network), so they run
 with Node's built-in runner and zero extra dependencies. Live behaviour —
 answer quality, grounding, streaming, rate limits, admin flows — is covered by
 the checklist in [`tests/manual-prompts.md`](tests/manual-prompts.md).
+
+---
+
+## Autonomous Academic Content Engine (Phase 5)
+
+The engine discovers syllabi, writes original study material, collects PYQs and
+sample papers, validates everything it produces, and stops at a human. It is
+**not** a scraper with an LLM bolted on: the legality rules are part of the data
+model, and a document StudyOS may not redistribute is never stored, only linked.
+
+| Screen | Route |
+| --- | --- |
+| Overview + Content Health | `/admin/content-engine` |
+| Job dashboard | `/admin/content-engine/jobs` |
+| Review queue | `/admin/content-engine/review` |
+| Find missing content | `/admin/content-engine/coverage` |
+| Source registry | `/admin/content-engine/sources` |
+| PYQ & sample-paper discovery | `/admin/content-engine/pyq-discovery` |
+
+Permissions: `engine.view` (content_editor, moderator, admin, super_admin) and
+`engine.manage` (moderator, admin, super_admin), seeded by
+`supabase/migrations/20261013000001_content_engine.sql`.
+
+### Layout
+
+```
+src/content-engine/            pure, dependency-free — shared by app AND worker
+  types.ts  license.ts  validation.ts  dedupe.ts
+  jobs.ts   prompts.ts  analytics.ts   api.ts   index.ts
+  sources/  board adapters (cbse, icse, isc, wbchse, state-boards, generic)
+src/admin/services/contentEngine.service.ts     admin data access
+src/admin/pages/ContentEngine*.tsx              the six screens
+src/components/content/                          NoteReader, SourceAttribution,
+                                                 ContentLabel, ChapterPackStrip
+src/services/provenance.service.ts               student-facing attribution reads
+supabase/functions/content-engine/index.ts      the worker entry point
+supabase/functions/_shared/content-engine/      robots, crawler, discovery,
+                                                 notes, queue
+```
+
+`src/content-engine/**` has **no npm imports, no `@/` aliases, no DOM and no
+Deno APIs**, so the Vite bundle and the Deno edge worker can both import the
+exact same decision logic. `api.ts` is the one exception (it talks to the
+network) and is deliberately not re-exported from `index.ts`.
+
+### Source registry (the crawl allow-list)
+
+`source_registry` is the whole policy surface. A host that is not on the list is
+never contacted — not even if a crawled page links to it. Each row stores:
+
+```
+source_name · domain · base_url · board_id · source_type
+license_status · redistribution_allowed · access_method
+enabled · priority · source_status · last_checked_at · consecutive_failures
+```
+
+`access_method` is `public | link_only | manual`. There is no `login`,
+`cookie`, `bypass` or `captcha` option, because the crawler has no code path
+that performs any of them.
+
+### Licence handling
+
+`decideStorage({ license, accessMethod, policy })` returns one of three
+verdicts and every write path consults it:
+
+| Verdict | Meaning | What is persisted |
+| --- | --- | --- |
+| `store` | redistribution confirmed | file + full attribution |
+| `metadata_only` | licence unknown / not asserted | title + canonical URL only |
+| `block` | restricted — we may not even keep the link | nothing |
+
+Defaults (`DEFAULT_LICENSE_POLICY`): `official`, `open_license`,
+`public_domain`, `permission_granted` → store; `unknown` → metadata only;
+`restricted` → block. **Publicly accessible is never treated as
+redistributable** — `access_method: 'public'` says how we reached a document,
+not what we may do with it.
+
+Every stored document and every provenance row carries `source_url`, `domain`,
+`publisher`, `source_type`, `license_status`, `redistribution_allowed`,
+`access_method`, `retrieved_at`. Those fields render, identically, through
+`attributionRows()` in both the admin console and the student "Where this
+content comes from" section.
+
+### Board adapters
+
+Adapters live in `src/content-engine/sources/*` and are looked up through
+`sources/registry.ts` (`getSourceAdapter`, `adapterForDomain`,
+`listAdapterChoices`). An adapter declares:
+
+```ts
+interface BoardSourceAdapter {
+  id, boardSlug, boardName, label
+  domains: string[]          // hard allow-list for this adapter
+  baseUrl
+  defaultSourceType, defaultLicense, defaultAccessMethod
+  urlPatterns: UrlPattern[]  // include/exclude + depth
+  resolveSession(html, url): AdapterSession | null   // dynamic, never hard-coded
+  discoverSyllabusTargets(session): DiscoveryTarget[]
+  discoverPaperTargets(session, filter?): DiscoveryTarget[]
+  extractLinks(html, url, depth): DiscoveryTarget[]
+  matches(url, depth): boolean
+}
+```
+
+There is **no `if (board === 'CBSE')` anywhere.** The engine asks the registry
+for the adapter whose domain matches the source row, and the adapter itself
+decides what a syllabus page or a paper index looks like for that board.
+
+The academic session (`2025-26`, `2026-27`, …) is **discovered** from live page
+text via `detectSession()` / `newestSession()`. A new session appearing on a
+board site is picked up on the next discovery run with no code change, and
+`content_generation_jobs.academic_session` records which session a job used. URL
+templates that bake in a year are not used anywhere.
+
+### Crawl politeness and limits
+
+`supabase/functions/_shared/content-engine/crawler.ts` enforces limits from
+`CRAWL_LIMITS` rather than trusting its callers:
+
+- **robots.txt is fail-closed** — an unreadable `robots.txt` means *do not
+  fetch*, not *fetch anyway*. Product token `studyos`, longest-match
+  `Allow`/`Disallow`, `Crawl-delay` honoured, cached per origin per run;
+- **per-domain rate** — rolling one-minute window + `Crawl-delay`;
+- **depth cap** (`maxDepth`) — links beyond it are never queued;
+- **size cap** (`maxResponseBytes`) — the body is streamed and cancelled past
+  the cap; an oversized response is never buffered;
+- **concurrency cap** — one host is never asked for more than `concurrency`
+  in-flight requests;
+- **timeouts** on every request.
+
+Refusals are counted and surfaced as `refused: { domain, robots, rate, size }`
+in the job result, so a run that fetched nothing explains itself instead of
+looking like a silent success.
+
+### Discovery
+
+`runDiscovery()` is a breadth-first walk: seeds come from the adapter, each page
+is classified (`syllabus | sample_paper | question_paper | marking_scheme |
+notification | reference | other`), and `decideStorage()` decides the storage
+state **before** anything is written. Authenticity defaults to
+`verified_official` only for sources registered as `official_board`,
+`verified_source_archive` for `open_repository`, and `unverified` for everything
+else. Duplicate URLs collapse on the `(source_id, canonical_url)` unique key,
+so re-running discovery is idempotent.
+
+### Note generation
+
+`_shared/content-engine/notes.ts` runs an unskippable pipeline:
+
+1. load board / class / subject / chapter / topics from the **database**
+   (`chapters.topics`, falling back to `chapter_maps.topics`);
+2. build the prompt from `prompts.ts` (`PROMPT_VERSION = ce-notes-v1`);
+3. ask the model for **structured JSON only**;
+4. `validateNote()` — syllabus alignment, missing topics, duplicate sections,
+   contradictory statements, formula/reaction consistency, invalid claims,
+   formatting, class appropriateness, structure;
+5. `repairTargets()` → regenerate **only the flagged sections**, then
+   re-validate (a failed repair never discards the original);
+6. persist `generated_notes` → `note_sections` → `note_items`, plus a
+   `content_validation_results` row carrying `repair_attempts` and
+   `repaired_targets`;
+7. leave the note in `needs_review` (or `validation_failed`).
+
+Content is **original and syllabus-aligned**: the system prompt forbids
+reproducing textbook chapters or third-party sites, forbids inventing years,
+paper numbers, marking schemes and source URLs, and requires `not verified`
+instead of a guess. Notes are stored as typed sections and items (`paragraph`,
+`definition`, `formula`, `derivation`, `example`, `reaction`, `table`, `tip`,
+`warning`, `question`, `answer`, `diagram`), rendered by
+`src/components/content/NoteReader.tsx` — the same component in the admin review
+queue and on the chapter page, so an editor approves exactly what a student will
+see.
+
+Depth is explicit: `quick | standard | detailed | exam_master`, each selecting a
+different section template set for the subject kind (physics / chemistry / maths
+/ biology / …) and a different class framing (foundational / board / advanced).
+
+### Validation, quality and versioning
+
+- `quality_score` (0–100) and `quality_grade` (A/B/C/review) come from
+  `scoreIssues()`; the UI always shows them next to the itemised warnings,
+  errors and coverage breakdown, never as a bare number;
+- `coverage` is a real report: `expected`, `covered`, `missing` syllabus topics;
+- `generated_content_versions` keeps a snapshot per version — a syllabus change
+  or a "Regenerate" creates a **new** version instead of overwriting what a
+  reviewer already read;
+- `content_hash` + `sha256` in `dedupe.ts` collapse identical output.
+
+### Provenance
+
+`source_provenance` records, per entity (`note | document | pyq_question |
+resource | paper | question`): source name, domain, publisher, canonical URL,
+source type, licence, redistribution flag, access method, official status,
+retrieval date. It is **publicly readable** (`grant select to anon`) because
+attribution is part of the content, and `SourceAttribution` renders it for
+students while the admin review queue renders the same rows for editors.
+
+### PYQ authenticity
+
+`pyq_import_jobs` + `paper_metadata` + `source_documents` carry
+`official_status`:
+
+| Tier | Meaning |
+| --- | --- |
+| `verified_official` | from the issuing body's own domain |
+| `verified_source_archive` | a known archive, source verified |
+| `third_party` | a publisher's edition, not the board's |
+| `unverified` | not confirmed — **never shown as an Official PYQ** |
+
+`labelForDocument()` turns that into the exact student wording (`Official
+Question Paper`, `Verified PYQ`, `Source Archive PYQ`, `Third-Party Practice
+Paper`, `Unverified Paper`, `AI-Generated Practice`, `AI-Generated Notes`,
+`StudyOS Original Notes`) via `src/components/content/ContentLabel.tsx`. AI
+practice is always rendered `AI-GENERATED PRACTICE` (`AI_PRACTICE_LABEL` in
+`prompts.ts`). Low-confidence chapter/topic mappings land in "needs review" and
+stay hidden until a human resolves them.
+
+### Jobs and scheduling
+
+`content_generation_jobs` is the single queue for discovery, chapter maps, every
+note type, validation, PYQ imports, re-indexing and maintenance.
+
+- **No INSERT/UPDATE RLS policy.** Rows are written only by `ce_enqueue_job()` /
+  `ce_control_job()` (SECURITY DEFINER, both re-check `engine.manage`) and by the
+  service-role worker — a student cannot enqueue generation even with a valid
+  session.
+- **Claiming is atomic**: `ce_claim_jobs(limit, worker)` uses
+  `FOR UPDATE SKIP LOCKED`, is granted **only** to `service_role`, and releases
+  locks older than 15 minutes so a crashed worker cannot wedge the queue.
+- **Chapters fail independently**: the worker catches per-job errors, marks that
+  row `failed` (or `partial` while attempts remain) and continues the batch.
+  `partial` is surfaced as "some chapters finished, some did not".
+- **Control actions**: Run now (priority → 10), Pause, Resume, Cancel, Retry,
+  Priority, and parent/child `parent_job_id` for fan-out.
+- `SCHEDULED_JOBS` in `src/content-engine/jobs.ts` declares daily maintenance,
+  weekly syllabus checks, change-detection and source-update triggers, with
+  `nextRun()` computing the next occurrence. Feature flags live in
+  `content_engine_settings`.
+
+### Change detection and dependency graph
+
+`content_dependencies` maps what a change affects; `affectedBySyllabusChange()`
+in `jobs.ts` turns a diff into the exact set of jobs to re-run. Discovery never
+overwrites the curriculum: it writes a `syllabus_change_sets` diff (`added /
+renamed / removed / reordered / new_session / removed_topic`) that a human
+approves in `/admin/content-engine/review`, after which
+`ce_apply_syllabus_changes()` applies it — new chapters are added and existing
+ones updated, **nothing is deleted**. Regeneration is incremental: only chapters
+whose inputs actually changed are re-queued.
+
+### RAG indexing
+
+Approval — not generation — triggers indexing. `ce_review_note()` moves a note
+to `approved`/`published`, and only then does the note get a row in
+`embedding_jobs`, which the existing `ai-embeddings` worker drains. A note that
+was never read by a human is never searchable.
+
+### Security
+
+- The browser never sees a provider key, the service role, or the source
+  allow-list logic — those live in the edge function and in SQL.
+- `content-engine` re-checks `engine.manage` on every POST after JWT
+  verification; `engine.view` on GET.
+- Students reach generated material only through published `resources` rows.
+- Crawling never bypasses a login, CAPTCHA, paywall or robots rule; there is no
+  code path that could.
+- Admin demo mode (no Supabase project) returns empty structures — the engine
+  never displays invented statistics.
+
+### Running the worker
+
+```bash
+FUNCTION_URL="https://<project>.supabase.co/functions/v1"
+
+# drain the queue (5 jobs, 240s budget, chapters fail independently)
+curl -X POST "$FUNCTION_URL/content-engine" -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"action":"processJobs","limit":5}'
+
+# run one job on demand ("Run now" in the dashboard)
+curl -X POST "$FUNCTION_URL/content-engine" -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -d '{"action":"runJob","jobId":"<uuid>"}'
+
+# queue + source status
+curl "$FUNCTION_URL/content-engine" -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+In production this is invoked on a schedule (pg_cron / Supabase schedule) so the
+queue drains without anyone clicking anything.
+
+### Adding a board adapter
+
+1. Create `src/content-engine/sources/<board>/index.ts` implementing
+   `BoardSourceAdapter` — domains, URL patterns, `resolveSession`,
+   `discoverSyllabusTargets`, `discoverPaperTargets`, `extractLinks`, `matches`.
+   Copy `sources/cbse/index.ts` as the template.
+2. Register it in `src/content-engine/sources/factory.ts` (or add a
+   `createAdapter('your-board')` branch) and export it from
+   `sources/registry.ts`.
+3. Add its licence posture to `defaultLicense` / `defaultAccessMethod` — be
+   honest; `unknown` is a perfectly good answer.
+4. Seed a `source_registry` row with `enabled = false`, then use **Check now** on
+   `/admin/content-engine/sources` to verify reachability and robots.txt before
+   enabling it.
+5. Run discovery for one session and read the `refused` counters — if everything
+   was refused, the adapter's patterns are wrong, not robots.txt.
+
+No student-facing code changes are required: coverage, review, jobs and
+provenance all key off the existing academic hierarchy.
 
 ---
 

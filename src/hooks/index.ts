@@ -17,6 +17,7 @@ export {
   useResources,
   useChapterResources,
   useSubjectResources,
+  useChapterProvenance,
   usePyqOverview,
   usePyqQuestions,
   usePyqPapers,

@@ -11,10 +11,12 @@ import {
   Sigma,
   Target,
 } from 'lucide-react'
-import { useBoards, useChapter, useChapterResources, useClasses, useStagger } from '@/hooks'
+import { useBoards, useChapter, useChapterResources, useClasses, useChapterProvenance, usePyqQuestions, useStagger } from '@/hooks'
 import { useApp } from '@/context/AppProvider'
 import { RESOURCE_TABS } from '@/data/resources'
 import { ResourceCard } from '@/components/ResourceCard'
+import { ChapterPackStrip } from '@/components/content/ChapterPackStrip'
+import { SourceAttribution } from '@/components/content/SourceAttribution'
 import {
   Badge,
   Breadcrumb,
@@ -56,11 +58,16 @@ export default function LibraryChapterPage() {
   const classesQuery = useClasses()
   const chapterQuery = useChapter(subjectId, chapterSlug, { board, classId })
   const resourcesQuery = useChapterResources(subjectId, chapterSlug)
+  /* Chapter slug is the one identifier the PYQ service matches on unambiguously. */
+  const pyqQuery = usePyqQuestions({ chapterSlug })
+  const provenanceQuery = useChapterProvenance(chapterQuery.data?.chapter.id)
 
   const boardData = boardsQuery.data?.find((entry) => entry.id === board)
   const classData = classesQuery.data?.find((entry) => entry.id === classId)
   const resolved = chapterQuery.data
   const resources = resourcesQuery.data ?? []
+  const pyqQuestions = pyqQuery.data ?? []
+  const provenance = provenanceQuery.data ?? []
 
   const hierarchyLoading = boardsQuery.loading || classesQuery.loading
   const hierarchyError = boardsQuery.error || classesQuery.error
@@ -189,6 +196,9 @@ export default function LibraryChapterPage() {
         </div>
       </Card>
 
+      {/* Study pack completeness — counted from rows, never estimated */}
+      <ChapterPackStrip resources={resources} pyqCount={pyqQuestions.length} />
+
       {/* Tabs */}
       <div>
         <Tabs items={tabItems} value={mode} onChange={(id) => setMode(id as Mode)} label="Chapter sections" />
@@ -261,6 +271,43 @@ export default function LibraryChapterPage() {
                       : `Steady progress here. Solve the PYQ set once more before the exam to lock in the ${chapter.questionCount}-question bank.`}
                   </p>
                 </Card>
+              </section>
+
+              {/* Sources — attribution for anything StudyOS did not write itself */}
+              <section aria-labelledby="sources">
+                <SectionHeader
+                  id="sources"
+                  title="Where this content comes from"
+                  subtitle="Every external document keeps its origin, licence and retrieval date."
+                />
+                {provenance.length ? (
+                  <div className="flex flex-col gap-2">
+                    {provenance.map((entry) => (
+                      <SourceAttribution
+                        key={entry.id}
+                        title={entry.source_name}
+                        source_name={entry.source_name}
+                        source_url={entry.source_url}
+                        domain={entry.domain}
+                        publisher={entry.publisher}
+                        retrieved_at={entry.retrieved_at}
+                        license_status={entry.license_status}
+                        redistribution_allowed={entry.redistribution_allowed}
+                        official_status={entry.official_status}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card padded className="bg-surface-muted">
+                    <p className="text-sm leading-relaxed text-muted">
+                      No external document has been used for this chapter, so there is nothing to
+                      attribute. Where a source cannot be redistributed, StudyOS keeps only its title
+                      and canonical link and shows a{' '}
+                      <span className="font-semibold text-foreground">View original</span> button
+                      instead of a download.
+                    </p>
+                  </Card>
+                )}
               </section>
 
               {/* Related */}

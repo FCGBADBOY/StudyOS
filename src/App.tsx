@@ -37,6 +37,12 @@ import AdminPyqPage from '@/admin/pages/AdminPyqPage'
 import AdminPyqFormPage from '@/admin/pages/AdminPyqFormPage'
 import AdminPyqImportPage from '@/admin/pages/AdminPyqImportPage'
 import AdminAcademicPage from '@/admin/pages/AdminAcademicPage'
+import ContentEnginePage from '@/admin/pages/ContentEnginePage'
+import ContentEngineJobsPage from '@/admin/pages/ContentEngineJobsPage'
+import ContentEngineReviewPage from '@/admin/pages/ContentEngineReviewPage'
+import ContentEngineSourcesPage from '@/admin/pages/ContentEngineSourcesPage'
+import ContentEngineCoveragePage from '@/admin/pages/ContentEngineCoveragePage'
+import ContentEnginePyqDiscoveryPage from '@/admin/pages/ContentEnginePyqDiscoveryPage'
 import AdminBoardsPage from '@/admin/pages/AdminBoardsPage'
 import AdminClassesPage from '@/admin/pages/AdminClassesPage'
 import AdminStreamsPage from '@/admin/pages/AdminStreamsPage'
@@ -181,6 +187,14 @@ export default function App() {
           <Route path="content/pyq/import" element={<AdminPyqImportPage />} />
           <Route path="content/pyq/new" element={<AdminPyqFormPage />} />
           <Route path="content/pyq/:id" element={<AdminPyqFormPage />} />
+
+          {/* Autonomous Content Engine */}
+          <Route path="content-engine" element={<ContentEnginePage />} />
+          <Route path="content-engine/jobs" element={<ContentEngineJobsPage />} />
+          <Route path="content-engine/review" element={<ContentEngineReviewPage />} />
+          <Route path="content-engine/sources" element={<ContentEngineSourcesPage />} />
+          <Route path="content-engine/coverage" element={<ContentEngineCoveragePage />} />
+          <Route path="content-engine/pyq-discovery" element={<ContentEnginePyqDiscoveryPage />} />
 
           {/* Academic hierarchy */}
           <Route path="academic" element={<AdminAcademicPage />} />

@@ -8,11 +8,17 @@
  */
 import {
   BarChart3,
+  Bot,
   BookOpen,
+  ClipboardCheck,
   FileQuestion,
+  FileSearch,
   FileText,
+  Globe,
   GraduationCap,
+  Layers,
   LayoutDashboard,
+  ListChecks,
   ScrollText,
   Settings,
   ShieldAlert,
@@ -75,7 +81,10 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         label: 'Content',
         icon: FileText,
         permission: 'content.view',
-        match: (pathname) => pathname.startsWith('/admin/content'),
+        /* `/admin/content-engine` also starts with `/admin/content` — without
+           the exclusion the Content Engine screens light up this entry too. */
+        match: (pathname) =>
+          pathname.startsWith('/admin/content') && !pathname.startsWith('/admin/content-engine'),
       },
       {
         href: '/admin/content/pyq',
@@ -83,6 +92,54 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: FileQuestion,
         permission: 'content.view',
         match: (pathname) => pathname.startsWith('/admin/content/pyq'),
+      },
+    ],
+  },
+  {
+    id: 'engine',
+    label: 'Content Engine',
+    items: [
+      {
+        href: '/admin/content-engine',
+        label: 'Overview',
+        icon: Bot,
+        permission: 'engine.view',
+        match: (pathname) => pathname === '/admin/content-engine',
+      },
+      {
+        href: '/admin/content-engine/jobs',
+        label: 'Jobs',
+        icon: ListChecks,
+        permission: 'engine.view',
+        match: (pathname) => pathname.startsWith('/admin/content-engine/jobs'),
+      },
+      {
+        href: '/admin/content-engine/review',
+        label: 'Review',
+        icon: ClipboardCheck,
+        permission: 'engine.view',
+        match: (pathname) => pathname.startsWith('/admin/content-engine/review'),
+      },
+      {
+        href: '/admin/content-engine/coverage',
+        label: 'Coverage',
+        icon: Layers,
+        permission: 'engine.view',
+        match: (pathname) => pathname.startsWith('/admin/content-engine/coverage'),
+      },
+      {
+        href: '/admin/content-engine/sources',
+        label: 'Sources',
+        icon: Globe,
+        permission: 'engine.view',
+        match: (pathname) => pathname.startsWith('/admin/content-engine/sources'),
+      },
+      {
+        href: '/admin/content-engine/pyq-discovery',
+        label: 'PYQ Discovery',
+        icon: FileSearch,
+        permission: 'engine.view',
+        match: (pathname) => pathname.startsWith('/admin/content-engine/pyq-discovery'),
       },
     ],
   },
